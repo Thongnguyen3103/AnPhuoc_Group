@@ -5,16 +5,13 @@ import os
 import re
 from pathlib import Path
 
+import duckdb
 import numpy as np
 import pandas as pd
 
 
 INVENTORY_DIR = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\4.Inventory_data")
-DB_PATH = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\1.Data_Tracking.xlsx")
-HDD_PATH = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\5.In_transit_stock_HDD.xlsx")
-OUTPUT_DIR = Path(r"D:\DataBase\3.Inventory")
-OUTPUT_WITH_SIZE_FILE = OUTPUT_DIR / "InventorySize.csv"
-OUTPUT_NO_SIZE_FILE = OUTPUT_DIR / "Inventory.csv"
+DB_PATH = Path(r"D:\DataBase\DuckDB\Database_AP.duckdb")
 KEEP_ZERO_QTY = os.environ.get("INVENTORY_KEEP_ZERO", "0") == "1"
 
 # --- Compiled regex constants (module level để tránh compile lại mỗi lần gọi) ---
@@ -49,8 +46,6 @@ FINAL_COLUMNS = [
     "Warehouse", "Region", "Store_name", "Brand", "System_item_name",
     "Report_item_name", "Mahang", "Operation", "Size", "Qty_TonKho",
     "Status", "Product_type", "Gender", "Product_group", "Group_Report",
-    "Color_group", "Form", "Style", "Attribute", "Dist_plan", "Production_month",
-    "Production_year",
 ]
 
 GROUP_COLUMNS = [c for c in FINAL_COLUMNS if c != "Qty_TonKho"]
@@ -224,48 +219,39 @@ def read_data_file(path: Path, usecols: list[str] | None = None) -> pd.DataFrame
     raise ValueError(f"Khong ho tro dinh dang file: {path}")
 
 
-def read_lookup_sheet(sheet_name: str) -> pd.DataFrame:
+def read_lookup_sheet(table_name: str) -> pd.DataFrame:
     try:
-        try:
-            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, engine="calamine", dtype=str)
-        except Exception:
-            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=str)
+        con = duckdb.connect(str(DB_PATH), read_only=True)
+        df = con.execute(f'SELECT * FROM "{table_name}"').df()
+        con.close()
         return normalize_columns(df).fillna("")
     except Exception as exc:
-        print(f"Canh bao: khong doc duoc sheet {sheet_name}: {exc}")
+        print(f"Canh bao: khong doc duoc table {table_name}: {exc}")
         return pd.DataFrame()
 
 
 def load_lookups() -> dict[str, pd.DataFrame]:
-    """Đọc tất cả 4 sheet từ DB_PATH trong 1 lần mở file."""
-    sheet_map = {
+    """Đọc tất cả 4 table từ DB_PATH."""
+    table_map = {
         "d_category": "D_Category",
         "a_region": "A_Region",
         "e_tshirt": "E_T-Shirt",
-        "f_tracking": "F_DataTracking",
     }
     try:
-        try:
-            all_sheets = pd.read_excel(
-                DB_PATH,
-                sheet_name=list(sheet_map.values()),
-                engine="calamine",
-                dtype=str,
-            )
-        except Exception:
-            all_sheets = pd.read_excel(
-                DB_PATH,
-                sheet_name=list(sheet_map.values()),
-                dtype=str,
-            )
-        return {
-            key: normalize_columns(all_sheets[sheet]).fillna("")
-            for key, sheet in sheet_map.items()
-        }
+        con = duckdb.connect(str(DB_PATH), read_only=True)
+        result = {}
+        for key, table in table_map.items():
+            try:
+                df = con.execute(f'SELECT * FROM "{table}"').df()
+                result[key] = normalize_columns(df).fillna("")
+            except Exception as exc:
+                print(f"Canh bao: khong doc duoc table {table}: {exc}")
+                result[key] = pd.DataFrame()
+        con.close()
+        return result
     except Exception as exc:
         print(f"Canh bao: khong doc duoc DB {DB_PATH}: {exc}")
-        # Fallback: đọc từng sheet
-        return {key: read_lookup_sheet(sheet) for key, sheet in sheet_map.items()}
+        return {key: read_lookup_sheet(table) for key, table in table_map.items()}
 
 
 def to_number(series: pd.Series) -> pd.Series:
@@ -317,37 +303,6 @@ def cast_inventory_number_columns(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[col] = to_number(df[col])
     return df
-
-
-def merge_f_tracking(df: pd.DataFrame, f_tracking: pd.DataFrame) -> pd.DataFrame:
-    tracking_cols = [
-        "item_code", "Operation", "Color_group", "Dist_plan", "Form",
-        "Production_month", "Production_year", "Style","Attribute",
-    ]
-    if not all(c in f_tracking.columns for c in tracking_cols):
-        return df
-
-    result = df.copy()
-    lookup = f_tracking[tracking_cols].copy()
-    lookup["_ft_item_key"] = normalize_text(lookup["item_code"])
-    lookup["_ft_operation_key"] = normalize_text(lookup["Operation"])
-    result["_ft_item_key"] = normalize_text(result["Mahang"])
-    result["_ft_operation_key"] = normalize_text(result["Operation"])
-
-    lookup_value_cols = [
-        "Color_group", "Dist_plan", "Form", "Production_month",
-        "Production_year", "Style","Attribute",
-    ]
-    lookup = lookup[
-        ["_ft_item_key", "_ft_operation_key", *lookup_value_cols]
-    ].drop_duplicates(["_ft_item_key", "_ft_operation_key"])
-
-    result = result.merge(
-        lookup,
-        on=["_ft_item_key", "_ft_operation_key"],
-        how="left",
-    )
-    return result.drop(columns=["_ft_item_key", "_ft_operation_key"], errors="ignore")
 
 
 def list_inventory_files() -> list[Path]:
@@ -403,7 +358,6 @@ def enrich_inventory(df: pd.DataFrame, lookups: dict[str, pd.DataFrame]) -> pd.D
     d_category = lookups["d_category"]
     a_region = lookups["a_region"]
     e_tshirt = lookups["e_tshirt"]
-    f_tracking = lookups["f_tracking"]
 
     category_cols = [
         "Short_name", "Brand", "System_item_name", "Report_item_name",
@@ -440,8 +394,6 @@ def enrich_inventory(df: pd.DataFrame, lookups: dict[str, pd.DataFrame]) -> pd.D
         tshirt = df["T-shirt_name"].fillna("").astype(str).str.strip()
         df["Report_item_name"] = np.where(tshirt != "", tshirt, df.get("Report_item_name", ""))
         df = df.drop(columns=["item_code", "T-shirt_name"], errors="ignore")
-
-    df = merge_f_tracking(df, f_tracking)
 
     df = df.drop(columns=["gia", "sale", "Nam", "LanSX", "Short_name", "Color_code"], errors="ignore")
     df = df.rename(columns={"TenCH": "Store_name"})
@@ -564,7 +516,6 @@ def enrich_grouped_inventory(df: pd.DataFrame, lookups: dict[str, pd.DataFrame])
     d_category = lookups["d_category"]
     a_region = lookups["a_region"]
     e_tshirt = lookups["e_tshirt"]
-    f_tracking = lookups["f_tracking"]
 
     category_cols = [
         "Short_name", "Brand", "System_item_name", "Report_item_name",
@@ -598,8 +549,6 @@ def enrich_grouped_inventory(df: pd.DataFrame, lookups: dict[str, pd.DataFrame])
         tshirt = df["T-shirt_name"].fillna("").astype(str).str.strip()
         df["Report_item_name"] = np.where(tshirt != "", tshirt, df.get("Report_item_name", ""))
         df = df.drop(columns=["item_code", "T-shirt_name"], errors="ignore")
-
-    df = merge_f_tracking(df, f_tracking)
 
     df = df.drop(columns=["sale", "Short_name"], errors="ignore")
     for col in FINAL_COLUMNS:
@@ -668,15 +617,10 @@ def process_inventory_folder(lookups: dict[str, pd.DataFrame]) -> tuple[pd.DataF
 
 
 def load_hdd_inventory() -> pd.DataFrame:
-    if not HDD_PATH.exists():
-        print(f"Canh bao: khong tim thay file HDD append: {HDD_PATH}")
-        return pd.DataFrame(columns=FINAL_COLUMNS)
-
     try:
-        try:
-            df = pd.read_excel(HDD_PATH, sheet_name="HDD_QLKD_Tong_hop", engine="calamine", dtype=str)
-        except Exception:
-            df = pd.read_excel(HDD_PATH, sheet_name="HDD_QLKD_Tong_hop", dtype=str)
+        con = duckdb.connect(str(DB_PATH), read_only=True)
+        df = con.execute('SELECT * FROM "HDD_QLKD_Tong_hop"').df()
+        con.close()
     except Exception as exc:
         print(f"Canh bao: khong doc duoc HDD_QLKD_Tong_hop: {exc}")
         return pd.DataFrame(columns=FINAL_COLUMNS)
@@ -703,14 +647,6 @@ def clean_text(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def write_csv(df: pd.DataFrame, path: Path) -> Path:
-    try:
-        df.to_csv(path, index=False, encoding="utf-8-sig")
-        return path
-    except PermissionError:
-        raise PermissionError(f"File dang bi khoa, hay dong file roi chay lai: {path}")
-
-
 def main() -> None:
     print("Bat dau xu ly Inventory")
     print("Doc lookup tu Data_Tracking")
@@ -731,15 +667,18 @@ def main() -> None:
     grouped_with_size = clean_text(grouped_with_size)
     grouped_no_size = clean_text(grouped_no_size)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with_size_file = write_csv(grouped_with_size, OUTPUT_WITH_SIZE_FILE)
-    no_size_file = write_csv(grouped_no_size, OUTPUT_NO_SIZE_FILE)
+    print("Ghi vao DuckDB...")
+    con = duckdb.connect(str(DB_PATH))
+    con.execute('DROP TABLE IF EXISTS "InventorySize"')
+    con.execute('CREATE TABLE "InventorySize" AS SELECT * FROM grouped_with_size')
+    con.execute('DROP TABLE IF EXISTS "Inventory"')
+    con.execute('CREATE TABLE "Inventory" AS SELECT * FROM grouped_no_size')
+    con.close()
 
     print("Hoan thanh")
-    print(f"File co Size: {with_size_file}")
+    print(f"Database: {DB_PATH}")
     print(f"So dong co Size: {len(grouped_with_size):,}")
     print(f"Tong Qty_TonKho co Size: {grouped_with_size['Qty_TonKho'].sum():,.0f}")
-    print(f"File khong Size: {no_size_file}")
     print(f"So dong khong Size: {len(grouped_no_size):,}")
     print(f"Tong Qty_TonKho khong Size: {grouped_no_size['Qty_TonKho'].sum():,.0f}")
 

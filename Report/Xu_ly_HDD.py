@@ -2,10 +2,10 @@
 import os, csv, glob, warnings
 import pandas as pd
 import numpy as np
+import duckdb
 
 FOLDER_HDD_QLKD = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\5.In_transit_stock_HDD\1.HDD_QLKD"
 FOLDER_HDD_REPORT = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\5.In_transit_stock_HDD\2.HDD_Report"
-OUT_XLSX = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\5.In_transit_stock_HDD.xlsx"
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -68,16 +68,18 @@ def clean_for_excel(df: pd.DataFrame) -> pd.DataFrame:
         df[c] = df[c].astype(str).str.replace(r'[\x00-\x08\x0B-\x0C\x0E-\x1F]', '', regex=True)
     return df
 
-def read_lookup_sheet(path: str, sheet_name: str) -> pd.DataFrame:
+def read_lookup_sheet(path: str, table_name: str) -> pd.DataFrame:
     try:
-        return pd.read_excel(path, sheet_name=sheet_name, dtype=str).fillna("")
+        con = duckdb.connect(path, read_only=True)
+        df = con.execute(f'SELECT * FROM "{table_name}"').df()
+        con.close()
+        return df.fillna("").astype(str)
     except Exception as e:
-        print(f"  ⚠️ Không đọc được sheet '{sheet_name}': {str(e)[:80]}")
+        print(f"  ⚠️ Không đọc được table '{table_name}': {str(e)[:80]}")
         return pd.DataFrame()
 
 def adjust_output_columns(
     df: pd.DataFrame,
-    f_tracking_df: pd.DataFrame,
     b_size_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Điều chỉnh nhẹ data đầu ra theo format Power Query M."""
@@ -85,22 +87,6 @@ def adjust_output_columns(
 
     # Đổi tên trước để logic match rõ ràng hơn
     result = result.rename(columns={"Mã hàng": "Mahang"})
-
-    tracking_key = ["item_code", "Operation"]
-    tracking_values = ["Color_group", "Dist_plan", "Form", "Production_month", "Production_year", "Style","Attribute"]
-    if (
-        len(f_tracking_df) > 0
-        and all(c in result.columns for c in ["Mahang", "Operation"])
-        and all(c in f_tracking_df.columns for c in tracking_key + tracking_values)
-    ):
-        result = result.merge(
-            f_tracking_df[tracking_key + tracking_values].drop_duplicates(subset=tracking_key),
-            how="left",
-            left_on=["Mahang", "Operation"],
-            right_on=tracking_key,
-            suffixes=("", "_tracking"),
-        )
-        result = result.drop(columns=["item_code"], errors="ignore")
 
     result = result.drop(
         columns=["STT", "Số chứng từ", "Ngày gửi", "Dự kiến", "Tên hàng"],
@@ -372,11 +358,10 @@ def main():
 
     # ===== BƯỚC 5: ĐỌC BẢNG LOOKUP TỪ DATABASE =====
     print("\n📁 BƯỚC 5: Đọc bảng lookup từ Database...")
-    db_file = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\1.Data_Tracking.xlsx"
+    db_file = r"D:\DataBase\DuckDB\Database_AP.duckdb"
     
     danh_muc_df = read_lookup_sheet(db_file, "D_Category")
     khu_vuc_df = read_lookup_sheet(db_file, "A_Region")
-    f_tracking_df = read_lookup_sheet(db_file, "F_DataTracking")
     b_size_df = read_lookup_sheet(db_file, "B_Size")
     e_tshirt_df = read_lookup_sheet(db_file, "E_T-Shirt")
     print("✓ Đọc Database xong")
@@ -509,28 +494,25 @@ def main():
     final_data["Status"] = final_data.apply(get_trang_thai, axis=1)
 
     print("  🔄 Điều chỉnh cột theo Power Query M ✓")
-    final_data = adjust_output_columns(final_data, f_tracking_df, b_size_df)
+    final_data = adjust_output_columns(final_data, b_size_df)
 
     print("\n🧹 Làm sạch ký tự cấm...")
     final_data = clean_for_excel(final_data)
     print("✓ Ký tự cấm làm sạch xong")
     
-    print("\n💾 Ghi file Excel...")
-    os.makedirs(os.path.dirname(OUT_XLSX), exist_ok=True)
-    try:
-        with pd.ExcelWriter(OUT_XLSX, engine="xlsxwriter", datetime_format="yyyy-mm-dd") as w:
-            final_data.to_excel(w, sheet_name="HDD_QLKD_Tong_hop", index=False)
-    except:
-        with pd.ExcelWriter(OUT_XLSX, engine="openpyxl", datetime_format="yyyy-mm-dd") as w:
-            final_data.to_excel(w, sheet_name="HDD_QLKD_Tong_hop", index=False)
-    print("✓ Ghi file xong")
+    print("\n💾 Ghi vào DuckDB...")
+    con = duckdb.connect(db_file)
+    con.execute('DROP TABLE IF EXISTS "HDD_QLKD_Tong_hop"')
+    con.execute('CREATE TABLE "HDD_QLKD_Tong_hop" AS SELECT * FROM final_data')
+    con.close()
+    print("✓ Ghi DuckDB xong")
 
     print("\n" + "-" * 80)
     print("✅ HOÀN THÀNH XỬ LÝ DỮ LIỆU HDD")
     print("-" * 80)
-    print(f"📍 Địa chỉ file: {OUT_XLSX}")
+    print(f"📍 Database: {db_file}")
     print(f"📊 Số dòng: {len(final_data):,} | Số cột: {final_data.shape[1]}")
-    
+
     # In tổng số lượng từ HDD_QLKD gốc (trước khi xóa)
     if "Số lượng" in qlkd_data_original.columns:
         tong_sl_qlkd = pd.to_numeric(
@@ -538,12 +520,12 @@ def main():
             errors="coerce"
         ).fillna(0).sum()
         print(f"📊 Tổng số lượng từ HDD_QLKD (gộp): {tong_sl_qlkd:,.0f}")
-    
+
     # In tổng số lượng từ file output sau xử lý
     output_qty_col = "Qty_TonKho" if "Qty_TonKho" in final_data.columns else "Số lượng"
     if output_qty_col in final_data.columns:
         tong_sl_output = pd.to_numeric(final_data[output_qty_col], errors="coerce").fillna(0).sum()
-        print(f"📊 Tổng số lượng trong file 5.In_transit_stock_HDD.xlsx: {tong_sl_output:,.0f}")
+        print(f"📊 Tổng Qty_TonKho trong HDD_QLKD_Tong_hop: {tong_sl_output:,.0f}")
     
     print("-" * 80)
 

@@ -80,6 +80,13 @@ def convert_xls_to_xlsx(folder_path):
             except:
                 pass
 
+FOLDER_HDD_QLKD = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\5.In_transit_stock_HDD\1.HDD_QLKD"
+
+
+def main():
+    convert_xls_to_xlsx(FOLDER_HDD_QLKD)
+
+
 if __name__ == "__main__":
     print("="*60)
     print("   TOOL CHUYỂN ĐỔI EXCEL 2003 (.xls) SANG WORKSHEET (.xlsx)")

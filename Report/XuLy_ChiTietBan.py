@@ -6,6 +6,7 @@ import numpy as np
 import csv
 import sys
 import io
+import duckdb
 
 # Set stdout encoding to UTF-8
 if sys.stdout.encoding != 'utf-8':
@@ -13,10 +14,58 @@ if sys.stdout.encoding != 'utf-8':
 
 SYSTEM_SALES_DIR = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\2.System_sales"
 CONTRACT_SALES_DIR = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\3.Contract_sales"
-DB_PATH = r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\1.Data_Tracking.xlsx"
-OUTPUT_SYSTEM_DIR = r"D:\DataBase\1.System_sales"
-OUTPUT_CONTRACT_DIR = r"D:\DataBase\2.Contract_sales"
-OUTPUT_DM_DIR = r"Y:\BẢO TRÂN\DM"
+DB_PATH = r"D:\DataBase\DuckDB\Database_AP.duckdb"
+
+def upsert_by_month(con: duckdb.DuckDBPyConnection, table_name: str, df: pd.DataFrame) -> str:
+    """Upsert theo (Year, Month): xóa các tháng có trong df rồi insert lại.
+    Nếu bảng chưa tồn tại thì tạo mới."""
+    table_exists = con.execute(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?",
+        [table_name],
+    ).fetchone()[0] > 0
+
+    con.register("_new_data", df)
+
+    if not table_exists:
+        con.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM _new_data')
+        msg = "Tạo mới"
+    else:
+        periods = (
+            df[["Year", "Month"]]
+            .dropna()
+            .drop_duplicates()
+            .astype({"Year": int, "Month": int})
+        )
+        if len(periods) > 0:
+            con.register("_periods", periods)
+            con.execute(
+                f'DELETE FROM "{table_name}" '
+                f'WHERE (CAST("Year" AS INTEGER), CAST("Month" AS INTEGER)) '
+                f'IN (SELECT "Year", "Month" FROM _periods)'
+            )
+            con.unregister("_periods")
+        con.execute(f'INSERT INTO "{table_name}" SELECT * FROM _new_data')
+        period_list = ", ".join(
+            f"{int(r.Year)}/{int(r.Month):02d}" for r in periods.itertuples()
+        )
+        msg = f"Cập nhật {len(periods)} tháng [{period_list}]"
+
+    con.unregister("_new_data")
+    return msg
+
+
+def parse_date(series: pd.Series, fmt: str) -> pd.Series:
+    """Parse cột ngày với format tường minh, bỏ qua phần giờ nếu có.
+    fmt ví dụ: '%m/%d/%Y' (system sales) hoặc '%d/%m/%Y' (contract sales)."""
+    raw = series.astype(str).str.strip()
+    date_str = raw.str.extract(r'(\d{1,2}/\d{1,2}/\d{4})', expand=False)
+    result = pd.to_datetime(date_str, format=fmt, errors='coerce')
+    failed = result.isna() & raw.ne('nan') & raw.ne('')
+    n_failed = failed.sum()
+    if n_failed:
+        print(f"  [WARN] {n_failed} dòng không parse được NgayChungTu.")
+    return result
+
 
 def robust_read_csv(path: str) -> pd.DataFrame:
     encodings_try = ["utf-8-sig", "utf-8", "cp1258", "cp1252", "latin1", "utf-16", "utf-16-le", "utf-16-be"]
@@ -47,14 +96,15 @@ def robust_read_csv(path: str) -> pd.DataFrame:
 
 def load_db():
     print("Loading database...")
-    a_region = pd.read_excel(DB_PATH, sheet_name="A_Region", dtype=str)
-    e_tshirt = pd.read_excel(DB_PATH, sheet_name="E_T-Shirt", dtype=str)
-    d_category = pd.read_excel(DB_PATH, sheet_name="D_Category", dtype=str)
-    b_size = pd.read_excel(DB_PATH, sheet_name="B_Size", dtype=str)
-    f_datatracking = pd.read_excel(DB_PATH, sheet_name="F_DataTracking", dtype=str)
-    return a_region, e_tshirt, d_category, b_size, f_datatracking
+    con = duckdb.connect(DB_PATH, read_only=True)
+    a_region = con.execute('SELECT * FROM "A_Region"').df().fillna("").astype(str)
+    e_tshirt = con.execute('SELECT * FROM "E_T-Shirt"').df().fillna("").astype(str)
+    d_category = con.execute('SELECT * FROM "D_Category"').df().fillna("").astype(str)
+    b_size = con.execute('SELECT * FROM "B_Size"').df().fillna("").astype(str)
+    con.close()
+    return a_region, e_tshirt, d_category, b_size
 
-def process_system_sales(a_region, e_tshirt, d_category, b_size, f_datatracking):
+def process_system_sales(a_region, e_tshirt, d_category, b_size):
     print("Processing System Sales...")
     files = glob.glob(os.path.join(SYSTEM_SALES_DIR, "*.csv"))
     if not files:
@@ -81,14 +131,17 @@ def process_system_sales(a_region, e_tshirt, d_category, b_size, f_datatracking)
             df[c] = pd.to_numeric(df[c].astype(str).str.replace(r'[^\d\-,\.]', '', regex=True).str.replace(',', '.'), errors='coerce')
     
     if "NgayChungTu" in df.columns:
-        df['NgayChungTu'] = pd.to_datetime(df['NgayChungTu'], errors='coerce', dayfirst=True)
+        # System sales: MM/DD/YYYY HH:MM:SS
+        df['NgayChungTu'] = parse_date(df['NgayChungTu'], '%m/%d/%Y')
         df['Month'] = df['NgayChungTu'].dt.month
-        df['Year'] = df['NgayChungTu'].dt.year
-        
+        df['Year']  = df['NgayChungTu'].dt.year
         valid_dates = df['Month'].notna() & df['Year'].notna()
         df['Quarter'] = pd.Series(dtype=object)
-        df.loc[valid_dates, 'Quarter'] = "Q" + np.ceil(df.loc[valid_dates, 'Month']/3).astype(int).astype(str) + "." + df.loc[valid_dates, 'Year'].astype(int).astype(str)
-        
+        df.loc[valid_dates, 'Quarter'] = (
+            "Q" + np.ceil(df.loc[valid_dates, 'Month'] / 3).astype(int).astype(str)
+            + "." + df.loc[valid_dates, 'Year'].astype(int).astype(str)
+        )
+
     if "DienGiai" in df.columns:
         df["Nội dung"] = df["DienGiai"].astype(str).str.split(":", n=1).str[0].str.strip()
     else:
@@ -144,11 +197,7 @@ def process_system_sales(a_region, e_tshirt, d_category, b_size, f_datatracking)
         df = df.rename(columns={'TacNghiep': 'Operation'})
     else:
         df['Operation'] = np.nan
-        
-    df = df.merge(f_datatracking[['item_code', 'Operation', 'Color_group', 'Dist_plan', 'Form', 'Production_month', 'Production_year', 'Style','Attribute']], 
-                  left_on=['MaHang', 'Operation'], right_on=['item_code', 'Operation'], how='left')
-    df = df.drop(columns=['item_code'], errors='ignore')
-        
+
     df = df.rename(columns={'SoLuong': 'Slg_Ban'})
     df['Sales _Type'] = pd.Series(dtype=object)
     df.loc[df['MaHang'].notna() & (df['MaHang'] != ""), 'Sales _Type'] = "Retail"
@@ -158,65 +207,34 @@ def process_system_sales(a_region, e_tshirt, d_category, b_size, f_datatracking)
     
     # Group By
     group_cols = [
-        "Store_name", "Month", "Quarter", "Year", "MaHang", "Operation", "Region", "Warehouse", 
-        "Brand", "Product_type", "Gender", "Product_group", "Report_item_name", "Status", 
-        "Size", "Dist_plan", "Production_month", "Production_year", "Sales _Type", 
-        "Color_group", "Form", "Style","Attribute", "Group_Report", "Nội dung"
+        "Store_name", "Month", "Quarter", "Year", "MaHang", "Operation", "Region", "Warehouse",
+        "Brand", "Product_type", "Gender", "Product_group", "Report_item_name", "Status",
+        "Size", "Group_Report", "Nội dung", "Sales _Type",
     ]
     # Ensure columns exist
     for c in group_cols:
         if c not in df.columns:
             df[c] = np.nan
-            
+
     df_grouped = df.groupby(group_cols, dropna=False).agg(Qty_Ban=('Slg_Ban', 'sum')).reset_index()
-    
+
     final_cols = [
         "Store_name", "Region", "Warehouse", "Month", "Quarter", "Year", "Brand", "Report_item_name",
         "MaHang", "Operation", "Size", "Qty_Ban", "Nội dung", "Status", "Product_type", "Gender", "Product_group",
-        "Group_Report", "Color_group", "Form", "Style","Attribute", "Dist_plan", "Production_month", "Production_year", "Sales _Type"
+        "Group_Report", "Sales _Type",
     ]
     
     for c in final_cols:
         if c not in df_grouped.columns:
             df_grouped[c] = np.nan
     df_grouped = df_grouped[final_cols]
-    
-    os.makedirs(OUTPUT_SYSTEM_DIR, exist_ok=True)
-    
-    try:
-        os.makedirs(OUTPUT_DM_DIR, exist_ok=True)
-    except Exception as e:
-        print(f"Warning: Could not create {OUTPUT_DM_DIR}: {e}")
-        
-    df_dm = df_grouped[df_grouped['Brand'].isin(['Hiệu An Phước', 'Hiệu Pierre Cardin'])]
-    
-    if 'Year' in df_grouped.columns:
-        years = df_grouped['Year'].dropna().unique()
-        for y in years:
-            y_int = int(y)
-            out_path = os.path.join(OUTPUT_SYSTEM_DIR, f"System_sales_{y_int}.csv")
-            df_grouped[df_grouped['Year'] == y].to_csv(out_path, index=False, encoding='utf-8-sig')
-            print(f"Exported System Sales for {y_int} to {out_path}")
-            
-            try:
-                out_path_dm = os.path.join(OUTPUT_DM_DIR, f"System_sales_{y_int}.csv")
-                df_dm[df_dm['Year'] == y].to_csv(out_path_dm, index=False, encoding='utf-8-sig')
-                print(f"Exported System Sales (DM) for {y_int} to {out_path_dm}")
-            except Exception as e:
-                print(f"Warning: Could not export to {out_path_dm}: {e}")
-    else:
-        out_path = os.path.join(OUTPUT_SYSTEM_DIR, "System_sales_All_Years.csv")
-        df_grouped.to_csv(out_path, index=False, encoding='utf-8-sig')
-        print(f"Exported System Sales to {out_path}")
-        
-        try:
-            out_path_dm = os.path.join(OUTPUT_DM_DIR, "System_sales_All_Years.csv")
-            df_dm.to_csv(out_path_dm, index=False, encoding='utf-8-sig')
-            print(f"Exported System Sales (DM) to {out_path_dm}")
-        except Exception as e:
-            print(f"Warning: Could not export to {out_path_dm}: {e}")
 
-def process_contract_sales(a_region, e_tshirt, d_category, b_size, f_datatracking):
+    con = duckdb.connect(DB_PATH)
+    msg = upsert_by_month(con, "System_sales", df_grouped)
+    con.close()
+    print(f"System_sales — {msg}: {len(df_grouped):,} dong")
+
+def process_contract_sales(a_region, e_tshirt, d_category, b_size):
     print("Processing Contract Sales...")
     files = glob.glob(os.path.join(CONTRACT_SALES_DIR, "*.csv"))
     if not files:
@@ -242,13 +260,17 @@ def process_contract_sales(a_region, e_tshirt, d_category, b_size, f_datatrackin
         df["Sale"] = pd.to_numeric(df["Sale"].astype(str).str.replace(r'[^\d\-,\.]', '', regex=True).str.replace(',', '.'), errors='coerce')
         
     if "NgayChungTu" in df.columns:
-        df['NgayChungTu'] = pd.to_datetime(df['NgayChungTu'], errors='coerce', dayfirst=True)
+        # Contract sales: DD/MM/YYYY
+        df['NgayChungTu'] = parse_date(df['NgayChungTu'], '%d/%m/%Y')
         df['Month'] = df['NgayChungTu'].dt.month
-        df['Year'] = df['NgayChungTu'].dt.year
+        df['Year']  = df['NgayChungTu'].dt.year
         valid_dates = df['Month'].notna() & df['Year'].notna()
         df['Quarter'] = pd.Series(dtype=object)
-        df.loc[valid_dates, 'Quarter'] = "Q" + np.ceil(df.loc[valid_dates, 'Month']/3).astype(int).astype(str) + "." + df.loc[valid_dates, 'Year'].astype(int).astype(str)
-        
+        df.loc[valid_dates, 'Quarter'] = (
+            "Q" + np.ceil(df.loc[valid_dates, 'Month'] / 3).astype(int).astype(str)
+            + "." + df.loc[valid_dates, 'Year'].astype(int).astype(str)
+        )
+
     def extract_ma_ch(x):
         x = str(x)
         if "/" in x and "-" in x:
@@ -292,72 +314,38 @@ def process_contract_sales(a_region, e_tshirt, d_category, b_size, f_datatrackin
         df = df.rename(columns={'TacNghiep': 'Operation'})
     else:
         df['Operation'] = np.nan
-        
-    df = df.merge(f_datatracking[['item_code', 'Operation', 'Color_group', 'Form', 'Style', 'Attribute', 'Dist_plan', 'Production_month', 'Production_year']], 
-                  left_on=['MaHang', 'Operation'], right_on=['item_code', 'Operation'], how='left')
-    df = df.drop(columns=['item_code'], errors='ignore')
-        
+
     df['Sales _Type'] = pd.Series(dtype=object)
     df.loc[df['MaHang'].notna() & (df['MaHang'] != ""), 'Sales _Type'] = "Contract"
     
     group_cols = [
-        "MaHang", "Operation", "Month", "Quarter", "Year", "Store_name", "Region", "Warehouse", 
-        "Brand", "Report_item_name", "Product_type", "Gender", "Product_group", "Group_Report", 
-        "Size", "Status", "Color_group", "Form", "Style", "Attribute", "Dist_plan", "Production_month", "Production_year", "Sales _Type"
+        "MaHang", "Operation", "Month", "Quarter", "Year", "Store_name", "Region", "Warehouse",
+        "Brand", "Report_item_name", "Product_type", "Gender", "Product_group", "Group_Report",
+        "Size", "Status", "Sales _Type",
     ]
-    
+
     for c in group_cols:
         if c not in df.columns:
             df[c] = np.nan
-            
+
     df_grouped = df.groupby(group_cols, dropna=False).agg(Qty_Ban=('SoLuong', 'sum')).reset_index()
-    
+
     final_cols = [
-        "Store_name", "Region", "Warehouse", "Month", "Quarter", "Year", "Brand", "Report_item_name", 
-        "MaHang", "Operation", "Size", "Qty_Ban", "Status", "Product_type", "Gender", "Product_group", 
-        "Group_Report", "Color_group", "Form", "Style", "Attribute","Dist_plan", "Production_month", "Production_year", "Sales _Type"
+        "Store_name", "Region", "Warehouse", "Month", "Quarter", "Year", "Brand", "Report_item_name",
+        "MaHang", "Operation", "Size", "Qty_Ban", "Status", "Product_type", "Gender", "Product_group",
+        "Group_Report", "Sales _Type",
     ]
     for c in final_cols:
         if c not in df_grouped.columns:
             df_grouped[c] = np.nan
     df_grouped = df_grouped[final_cols]
-    
-    os.makedirs(OUTPUT_CONTRACT_DIR, exist_ok=True)
-    
-    try:
-        os.makedirs(OUTPUT_DM_DIR, exist_ok=True)
-    except Exception as e:
-        print(f"Warning: Could not create {OUTPUT_DM_DIR}: {e}")
-        
-    df_dm = df_grouped[df_grouped['Brand'].isin(['Hiệu An Phước', 'Hiệu Pierre Cardin'])]
-    
-    if 'Year' in df_grouped.columns:
-        years = df_grouped['Year'].dropna().unique()
-        for y in years:
-            y_int = int(y)
-            out_path = os.path.join(OUTPUT_CONTRACT_DIR, f"Contract_sales_{y_int}.csv")
-            df_grouped[df_grouped['Year'] == y].to_csv(out_path, index=False, encoding='utf-8-sig')
-            print(f"Exported Contract Sales for {y_int} to {out_path}")
-            
-            try:
-                out_path_dm = os.path.join(OUTPUT_DM_DIR, f"Contract_sales_{y_int}.csv")
-                df_dm[df_dm['Year'] == y].to_csv(out_path_dm, index=False, encoding='utf-8-sig')
-                print(f"Exported Contract Sales (DM) for {y_int} to {out_path_dm}")
-            except Exception as e:
-                print(f"Warning: Could not export to {out_path_dm}: {e}")
-    else:
-        out_path = os.path.join(OUTPUT_CONTRACT_DIR, "Contract_sales_All_Years.csv")
-        df_grouped.to_csv(out_path, index=False, encoding='utf-8-sig')
-        print(f"Exported Contract Sales to {out_path}")
-        
-        try:
-            out_path_dm = os.path.join(OUTPUT_DM_DIR, "Contract_sales_All_Years.csv")
-            df_dm.to_csv(out_path_dm, index=False, encoding='utf-8-sig')
-            print(f"Exported Contract Sales (DM) to {out_path_dm}")
-        except Exception as e:
-            print(f"Warning: Could not export to {out_path_dm}: {e}")
+
+    con = duckdb.connect(DB_PATH)
+    msg = upsert_by_month(con, "Contract_sales", df_grouped)
+    con.close()
+    print(f"Contract_sales — {msg}: {len(df_grouped):,} dong")
 
 if __name__ == "__main__":
-    a_region, e_tshirt, d_category, b_size, f_datatracking = load_db()
-    process_system_sales(a_region, e_tshirt, d_category, b_size, f_datatracking)
-    process_contract_sales(a_region, e_tshirt, d_category, b_size, f_datatracking)
+    a_region, e_tshirt, d_category, b_size = load_db()
+    process_system_sales(a_region, e_tshirt, d_category, b_size)
+    process_contract_sales(a_region, e_tshirt, d_category, b_size)
