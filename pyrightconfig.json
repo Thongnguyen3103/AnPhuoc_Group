@@ -1,0 +1,12 @@
+{
+  "//": "Cho Pylance (VS Code) biet cac thu muc ma code them vao sys.path luc chay -> het canh bao 'Import ... could not be resolved'. Moi project mot moi truong rieng de tranh trung ten module.",
+  "exclude": ["99.Archive", "04.Output", "**/__pycache__", "**/Data", "**/Cache"],
+  "executionEnvironments": [
+    { "root": "03.Projects/Report_LCHH",     "extraPaths": ["00.Shared", "03.Projects/Report_LCHH/Core"] },
+    { "root": "03.Projects/Report_Transfer", "extraPaths": ["00.Shared", "03.Projects/Report_Transfer"] },
+    { "root": "03.Projects/Report_Summary",  "extraPaths": ["00.Shared", "03.Projects/Report_Summary/Core"] },
+    { "root": "02.Data_Processing",          "extraPaths": ["00.Shared", "02.Data_Processing"] },
+    { "root": "01.Data_Download",            "extraPaths": ["01.Data_Download/Code"] },
+    { "root": ".",                           "extraPaths": ["00.Shared"] }
+  ]
+}

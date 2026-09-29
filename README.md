@@ -95,6 +95,11 @@ out_dir = Get_Paths.thu_muc_ket_qua("My_Project")     # -> 04.Output/My_Project 
 
 Cần đường dẫn mới → thêm 1 dòng vào `Config_Paths.yaml`, **không** ghi cứng trong code.
 
+**VS Code / Pylance:** vì import dựa vào `sys.path` lúc chạy, các thư mục này được khai báo cho Pylance
+trong `pyrightconfig.json` (thư mục gốc). Thêm project mới có import từ thư mục con → thêm 1 dòng vào
+`executionEnvironments` trong file đó, nếu không VS Code sẽ báo *Import ... could not be resolved*
+(chỉ là cảnh báo của trình soạn thảo, code vẫn chạy được). Mở VS Code tại thư mục `01.Python_Projects`.
+
 ## Quy ước đặt tên
 
 - Thư mục và file code: tiếng Anh, viết hoa chữ cái đầu mỗi từ, dạng **`LàmGì_ỞĐâu`**
