@@ -172,3 +172,8 @@ class TraKhoProcessor(MonthlySourceProcessor):
 
         print(f"TraKho — {len(df_grouped):,} dòng nhóm | Tổng Qty_Tra: {df_grouped['Qty_Tra'].sum():,.0f}")
         return df_grouped
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    TraKhoProcessor().run()

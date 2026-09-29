@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import glob
 import os
+import sys
 from abc import ABC, abstractmethod
 
 import pandas as pd
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "00.Shared"))  # 00.Shared (Read_Write_Parquet...)
 
 from Read_Write_Parquet import export_parquet_partitioned
 

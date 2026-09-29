@@ -179,3 +179,8 @@ class NhapTuSXProcessor(MonthlySourceProcessor):
 
         print(f"NhapTuSX — {len(df_grouped):,} dòng nhóm | Tổng SoLuong: {df_grouped['SoLuong'].sum():,.0f}")
         return df_grouped
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    NhapTuSXProcessor().run()

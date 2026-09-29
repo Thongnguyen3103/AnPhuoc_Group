@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
-"""I/O dùng chung cho lớp Parquet: đọc bảng lookup Master, đọc bảng dữ liệu bằng tên
-(A_Region, System_sales...) trực tiếp từ file Parquet, xuất Parquet phân mảnh theo năm/tháng.
 
-KHÔNG dùng file .duckdb — DuckDB chỉ chạy trong RAM làm công cụ truy vấn Parquet:
-
-    con = connect_parquet_views()                       # view A_Region, System_sales, ... -> file parquet
-    df = con.execute("SELECT * FROM A_Region").fetchdf()
-    df = read_table("D_Category")                        # hoặc đọc thẳng 1 bảng ra DataFrame
-"""
 from __future__ import annotations
 
 import os

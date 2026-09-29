@@ -114,3 +114,8 @@ class LenhLuanChuyenProcessor(MonthlySourceProcessor):
 
         print(f"HH_LuanChuyen — {len(df):,} dòng | Tổng Qty_Chuyen: {df['Qty_Chuyen'].sum():,.0f}")
         return df
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    LenhLuanChuyenProcessor().run()

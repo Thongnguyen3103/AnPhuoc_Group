@@ -312,3 +312,11 @@ class ContractSalesProcessor(MonthlySourceProcessor):
         print(f"  >>> Không có filter loại dòng (Contract Sales) | Tổng SoLuong đưa vào nhóm: {df['SoLuong'].sum():,.0f}")
         print(f"Contract_sales — {len(df_grouped):,} dòng nhóm | Tổng Qty_Ban: {df_grouped['Qty_Ban'].sum():,.0f}")
         return df_grouped
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    # Chay ca Ban le + Ban hop dong, dung chung lookups (doc Master 1 lan) — giong Run_All_Processing.py
+    _lookups = SystemSalesProcessor().load_lookups()
+    SystemSalesProcessor().run(lookups=_lookups)
+    ContractSalesProcessor().run(lookups=_lookups)

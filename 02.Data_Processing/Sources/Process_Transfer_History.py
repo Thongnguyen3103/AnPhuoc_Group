@@ -149,3 +149,8 @@ class HistoryLCProcessor(MonthlySourceProcessor):
 
         print(f"History_LC — {len(df_grouped):,} dòng nhóm | Tổng Qty_Chuyen: {df_grouped['Qty_Chuyen'].sum():,.0f}")
         return df_grouped
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    HistoryLCProcessor().run()

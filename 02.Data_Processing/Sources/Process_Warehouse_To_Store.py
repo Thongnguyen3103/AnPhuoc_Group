@@ -208,3 +208,8 @@ class KhoXuatCHProcessor(MonthlySourceProcessor):
 
         print(f"KhoXuat_CH — {len(df_grouped):,} dòng nhóm | Tổng SoLuong: {df_grouped['SoLuong'].sum():,.0f}")
         return df_grouped
+
+
+if __name__ == "__main__":
+    # Chay doc lap file nay (vd bam Run trong VS Code)
+    KhoXuatCHProcessor().run()
