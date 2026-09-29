@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-dc_output.py
+ket_xuat.py
 Dựng Sheet 3 (chi tiết size + đề xuất)
 Dựng Sheet 4 (lệnh chi tiết + tồn dự kiến + khoảng cách km)
 Dựng Sheet 5 (tổng hợp lệnh gọn), Sheet 6 (tổng hợp theo cửa hàng).
 """
 import pandas as pd
-import dc_geo as geo
+import dia_ly as geo
 
 # ─────────────────────────────────────────────
 # SHEET 3 — Chi tiết size & đề xuất xuất/nhận

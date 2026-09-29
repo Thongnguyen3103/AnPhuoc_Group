@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
-from common import (
+from tien_ich_chung import (
     ACCOUNTS, SETTINGS, TMP_DOWNLOAD_DIR, NoDataError, click_and_download, create_driver,
     dismiss_alert, dump_debug, log, months_back_range, pick_kho_option, wait_idle,
 )
@@ -54,7 +54,7 @@ def login(driver):
         raise RuntimeError(f"Đăng nhập QLKD thất bại: {(e.alert_text or '').strip()}")
     except TimeoutException:
         dump_debug(driver, "qlkd_login_failed")
-        raise RuntimeError("Đăng nhập QLKD thất bại (kiểm tra config/accounts.json).")
+        raise RuntimeError("Đăng nhập QLKD thất bại (kiểm tra cau_hinh/tai_khoan.json).")
     wait_idle(driver)
     log.info("Đăng nhập QLKD thành công.")
 

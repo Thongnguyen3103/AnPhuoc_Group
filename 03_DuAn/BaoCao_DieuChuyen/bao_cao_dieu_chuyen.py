@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-BÁO CÁO ĐIỀU CHUYỂN HÀNG HÓA — chạy: python main.py
+BÁO CÁO ĐIỀU CHUYỂN HÀNG HÓA — chạy: python bao_cao_dieu_chuyen.py
 Yêu cầu: pip install duckdb pandas openpyxl numpy
 
 Giao diện: 1 cửa sổ duy nhất — chọn file/tham số ngay trên đó, bấm "Chạy Báo Cáo",
 xem tiến trình chạy trực tiếp trong khung log, xong thì bấm nút để mở file kết quả.
 
 Xem README.md để biết chi tiết quy trình, các điểm đã đơn giản hoá, và cách chạy
-generate_geo.py trước để có toạ độ cửa hàng chính xác hơn.
+tao_toa_do.py trước để có toạ độ cửa hàng chính xác hơn.
 """
 import os
 import sys
@@ -22,20 +22,24 @@ from tkinter import filedialog, messagebox, ttk, scrolledtext
 
 import pandas as pd
 
-import dc_config as cfg
-import dc_data as data
-import dc_pipeline as pipeline
-import dc_allocate as allocate
-import dc_output as outp
-import dc_writer as writer
-import dc_geo as geo_mod
-import dc_compute as comp
-import dc_display as disp
+import tham_so as cfg
+import doc_du_lieu as data
+import quy_trinh as pipeline
+import phan_bo as allocate
+import ket_xuat as outp
+import ghi_excel as writer
+import dia_ly as geo_mod
+import tinh_toan as comp
+import hien_thi as disp
 
-DUCKDB_PATH_DEFAULT = r"D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group\04.Data_Db\01.Data_DuckDB\Database_AP.duckdb"
 HERE = os.path.dirname(os.path.abspath(__file__))
-STATE_FILE = os.path.join(HERE, "hieu_suat_ky_history.json")
-GEO_CSV = os.path.join(HERE, "ViTri_DiaLy_CuaHang.csv")
+sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
+DUCKDB_PATH_DEFAULT = duong_dan.duckdb_database_ap
+OUT_DIR_DEFAULT = duong_dan.thu_muc_ket_qua("BaoCao_DieuChuyen")   # 04_KetQua/BaoCao_DieuChuyen
+STATE_FILE = os.path.join(HERE, "du_lieu", "lich_su_hieu_suat_ky.json")
+GEO_CSV = os.path.join(HERE, "du_lieu", "ViTri_DiaLy_CuaHang.csv")
 
 
 class CancelledError(Exception):
@@ -146,7 +150,7 @@ def run_pipeline(params, log, cancel_event=None):
         log(f"Đã nạp toạ độ từ ViTri_DiaLy_CuaHang.csv ({len(geo_df)} CH).")
         all_stores_df = all_stores_df.merge(geo_df, on="Store_name", how="left")
     elif do_geocode:
-        log("Chưa có ViTri_DiaLy_CuaHang.csv — tự geocode xấp xỉ (khuyến nghị chạy generate_geo.py để chính xác hơn).")
+        log("Chưa có ViTri_DiaLy_CuaHang.csv — tự geocode xấp xỉ (khuyến nghị chạy tao_toa_do.py để chính xác hơn).")
         coords = geo_mod.build_store_coords(all_stores_df)
         all_stores_df["Lat"] = all_stores_df["Store_name"].map(lambda s: coords.get(s, (None, None, None))[0])
         all_stores_df["Lon"] = all_stores_df["Store_name"].map(lambda s: coords.get(s, (None, None, None))[1])
@@ -466,7 +470,7 @@ class App:
         c3 = self._create_rounded_card(row2, BG, CARD, CARD_BORDER)
         c3.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         tk.Label(c3, text="💾  Thư mục lưu file kết quả", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
-        self.out_var = tk.StringVar()
+        self.out_var = tk.StringVar(value=OUT_DIR_DEFAULT)
         self._entry_row(c3, self.out_var, self._browse_out)
         tk.Label(c3, text="(Để trống: lưu cùng thư mục với file CSV)", font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(anchor="w", padx=12, pady=(0, 6))
 
@@ -524,7 +528,7 @@ class App:
         c6.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         tk.Label(c6, text="🗺️  Toạ độ địa lý", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
         self.do_geocode_var = tk.BooleanVar(value=True)
-        cb_geo = tk.Checkbutton(c6, text="Tự động geocode cửa hàng chưa có toạ độ\n(nếu chưa chạy generate_geo.py)",
+        cb_geo = tk.Checkbutton(c6, text="Tự động geocode cửa hàng chưa có toạ độ\n(nếu chưa chạy tao_toa_do.py)",
                                 variable=self.do_geocode_var, bg=CARD, fg=TEXT, selectcolor=ENTRY_BG,
                                 activebackground=CARD, activeforeground=TEXT, font=FONT, justify="left",
                                 anchor="w", cursor="hand2")
@@ -756,7 +760,7 @@ class App:
             messagebox.showerror("Lỗi", "Danh sách cửa hàng chưa tải xong — vui lòng đợi rồi thử lại "
                                          "(hoặc bấm '🔄 Tải lại danh sách cửa hàng').")
             return
-        out_dir = self.out_var.get().strip() or os.path.dirname(csv_path)
+        out_dir = self.out_var.get().strip() or OUT_DIR_DEFAULT
         excluded_stores = [name for name, (var, _r) in self._store_vars.items() if not var.get()]
 
         round_display_map = {

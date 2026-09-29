@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-dc_data.py
+doc_du_lieu.py
 Truy vấn DuckDB, ráp dữ liệu theo key Combined_PK
 Combined_PK = MaHang || Operation
 """
 import re
 import duckdb
 import pandas as pd
-import dc_config as cfg
+import tham_so as cfg
 
 # ─────────────────────────────────────────────
 # DATABASE — Kết nối & truy vấn
@@ -33,7 +33,7 @@ def load_scope_stores(con, selected_regions=None, excluded_stores=None):
 
 
 def load_geo_csv(path):
-    """Đọc ViTri_DiaLy_CuaHang.csv (tạo bởi generate_geo.py, người dùng có thể đã sửa tay)."""
+    """Đọc ViTri_DiaLy_CuaHang.csv (tạo bởi tao_toa_do.py, người dùng có thể đã sửa tay)."""
     import os
     if not path or not os.path.exists(path):
         return None

@@ -21,16 +21,45 @@ from __future__ import annotations
 
 import os
 
-import yaml
-
 THU_MUC_DUNG_CHUNG = os.path.dirname(os.path.abspath(__file__))
 THU_MUC_DU_AN = os.path.dirname(THU_MUC_DUNG_CHUNG)          # 01.Python_Projects
 FILE_CAU_HINH = os.path.join(THU_MUC_DUNG_CHUNG, "cau_hinh.yaml")
 
 
+def _doc_yaml_don_gian(text: str) -> dict:
+    """Đọc cau_hinh.yaml khi môi trường không có PyYAML (vd env inventory_env).
+    Chỉ hỗ trợ đúng dạng của file: `key: "gia tri"` và 1 cấp lồng (duong_dan:)."""
+    cfg: dict = {}
+    section = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
+            continue
+        key, value = stripped.split(":", 1)
+        value = value.strip()
+        if value.startswith(('"', "'")):
+            value = value[1:value.index(value[0], 1)]
+        elif "#" in value:
+            value = value.split("#", 1)[0].strip()
+        if line[:1] in (" ", "\t") and section is not None:
+            cfg[section][key.strip()] = value
+        elif value:
+            cfg[key.strip()] = value
+            section = None
+        else:
+            section = key.strip()
+            cfg[section] = {}
+    return cfg
+
+
 def _doc_cau_hinh() -> tuple[str, dict[str, str]]:
     with open(FILE_CAU_HINH, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+        text = f.read()
+    try:
+        import yaml
+        cfg = yaml.safe_load(text)
+    except ImportError:
+        cfg = _doc_yaml_don_gian(text)
     goc = cfg["goc_du_lieu"]
     ds = {}
     for key, value in (cfg.get("duong_dan") or {}).items():

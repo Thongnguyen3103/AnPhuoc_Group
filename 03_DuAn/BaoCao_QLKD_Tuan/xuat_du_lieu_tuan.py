@@ -11,8 +11,11 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignor
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignore')
 
 # Define database and output paths
-DATABASE_PATH = r"D:\DataBase\DuckDB\Report_AP.duckdb"
-OUTPUT_DIR = r"D:\QLKD\Data_report"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
+DATABASE_PATH = duong_dan.duckdb_report_ap            # tao boi 02_XuLyDuLieu/doanh_thu.py
+OUTPUT_DIR = duong_dan.thu_muc_ket_qua("BaoCao_QLKD_Tuan")   # 04_KetQua/BaoCao_QLKD_Tuan
 
 # The columns of Database (Aggregated weekly/monthly metrics per Store-Brand)
 COLUMNS_DB = [

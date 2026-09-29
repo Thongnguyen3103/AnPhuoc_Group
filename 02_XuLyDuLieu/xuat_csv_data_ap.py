@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""Xuất các bảng Parquet đã xử lý ra CSV cho Data_ReportAP.
 
-Ghi vào: D:\00.Data_AnPhuoc_Group\05.Data_Csv
+Ghi vào: 05.Data_Csv (key csv_xuat trong dung_chung/cau_hinh.yaml)
 """
 import os
 import sys

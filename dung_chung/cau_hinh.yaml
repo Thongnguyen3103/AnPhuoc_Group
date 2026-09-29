@@ -51,6 +51,9 @@ duong_dan:
   # ---- 05.Data_Csv: bản CSV xuất cho Power BI / chia sẻ ----
   csv_xuat:              "${goc}/05.Data_Csv"
 
+  # ---- 06.Data_Images: ảnh sản phẩm ----
+  hinh_anh:              "${goc}/06.Data_Images"
+
   # ---- Ổ mạng / file ngoài kho dữ liệu ----
   hhlc_o_mang:           "//hovmfs01/PKD/PhanPhoi/DieuChuyen_HH_HTCH/Recode_DieuChuyen"
   phan_tich_o_mang:      "//hovmfs01/PKD/PhanPhoi/Thong.Nguyen/Analysis_data"

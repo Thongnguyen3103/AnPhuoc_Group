@@ -3,9 +3,9 @@ Giao diện chọn mục và chạy tool tải báo cáo An Phước.
 
   Tab "Chạy"       : tích các mục cần tải, bấm Chạy / Dừng, xem log trực tiếp
   Tab "Tồn kho"    : ma trận Kho x Nhóm hàng, tích ô nào thì tải ô đó
-  Tab "Tài khoản"  : đổi ID / mật khẩu 2 web (lưu vào config/accounts.json)
+  Tab "Tài khoản"  : đổi ID / mật khẩu 2 web (lưu vào cau_hinh/tai_khoan.json)
 
-Giao diện gọi src/runner.py trong 1 tiến trình riêng nên vẫn dùng được trong lúc tải.
+Giao diện gọi chay_ngam.py trong 1 tiến trình riêng nên vẫn dùng được trong lúc tải.
 """
 import datetime as dt
 import os
@@ -18,12 +18,12 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
-from common import (
+from tien_ich_chung import (
     ACCOUNTS_FILE, EMPTY_CACHE_FILE, LOG_DIR, ROOT, SETTINGS_FILE, load_json, month_range,
     months_back_range, save_json, yesterday,
 )
 
-RUNNER = Path(__file__).resolve().parent / "runner.py"
+RUNNER = Path(__file__).resolve().parent / "chay_ngam.py"
 FMT = "%d/%m/%Y"
 
 JOB_LABELS = {
@@ -215,7 +215,7 @@ class App(tk.Tk):
         ttk.Label(f, text="Tích ô (Kho x Nhóm hàng) cần tải tồn kho. Bấm tên kho / tên nhóm để "
                           "tích hoặc bỏ cả hàng / cả cột.", style="Head.TLabel").pack(anchor="w")
         ttk.Label(f, text="Ô \"–\" = kho không có nhóm hàng này (sửa danh sách ở mục \"available\" "
-                          "trong config/settings.json).", foreground="#666").pack(anchor="w")
+                          "trong cau_hinh/thiet_lap.json).", foreground="#666").pack(anchor="w")
         ttk.Label(f, text="Ô ghi \"rỗng\" = lần kiểm tra gần nhất không có dữ liệu, sẽ tự bỏ qua "
                           "(trừ khi tích \"tải lại cả các ô đã biết là rỗng\" ở tab Chạy).",
                   foreground="#666").pack(anchor="w", pady=(0, 8))

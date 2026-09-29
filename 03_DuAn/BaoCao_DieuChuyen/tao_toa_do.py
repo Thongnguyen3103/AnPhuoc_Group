@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-generate_geo.py
+tao_toa_do.py
 Tạo file ViTri_DiaLy_CuaHang.csv từ bảng A_Region
 Suy toạ độ từ địa chỉ bằng geocoder (Nominatim hoặc JSON fallback).
 """
 import os
+import sys
 import pandas as pd
-import dc_data as data
-import dc_geo as geo
+import doc_du_lieu as data
+import dia_ly as geo
 
-DEFAULT_OUTPUT = "ViTri_DiaLy_CuaHang.csv"
-DEFAULT_DB = r"D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group\04.Data_Db\01.Data_DuckDB\Database_AP.duckdb"
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
+DEFAULT_OUTPUT = os.path.join(HERE, "du_lieu", "ViTri_DiaLy_CuaHang.csv")
+DEFAULT_DB = duong_dan.duckdb_database_ap
 
 
 def main():

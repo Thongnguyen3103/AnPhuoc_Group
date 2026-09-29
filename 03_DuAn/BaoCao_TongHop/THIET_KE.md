@@ -3,7 +3,7 @@
 
 
 > ⚠️ **TÀI LIỆU LỊCH SỬ (bản thiết kế mục tiêu, 09/09/2026).** Hệ thống đã tiến hoá nhiều so với bản này
-> (cấu trúc `ov`, tên/nội dung 8 sheet, "Kỳ xem", SKU = MaHang+Operation…). **Bản đúng hiện tại là `ARCHITECTURE.md`.**
+> (cấu trúc `ov`, tên/nội dung 8 sheet, "Kỳ xem", SKU = MaHang+Operation…). **Bản đúng hiện tại là `KIEN_TRUC.md`.**
 > Giữ file này để tham khảo ý tưởng gốc (phân khúc §6, phân tích chuyên sâu §13–14 chưa làm hết).
 
 > Ngày: 09/09/2026.
@@ -52,15 +52,15 @@ là do nhồi cả dữ liệu thô + Plotly (2 lần) + JSON không nén vào c
 
 ```
 
-D:\00.Data_AnPhuoc_Group   (chỉ trên máy chủ dữ liệu — parquet gốc ~4.7M dòng)
+D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group   (chỉ trên máy chủ dữ liệu — parquet gốc ~4.7M dòng)
 
         │
 
-        ▼   python backend/Update_Baocao_TongHop.py        (1 lệnh duy nhất)
+        ▼   python xu_ly/cap_nhat_bao_cao.py        (1 lệnh duy nhất)
 
 ┌────────────────────────────────────────────────────────────┐
 
-│ [1] refresh_cache  → database/cache_sales.parquet           │
+│ [1] refresh_cache  → du_lieu_tam/cache_ban_hang.parquet           │
 
 │ [2] aggregate_ton  → dict tổng hợp Tồn  (đã GROUP BY)       │
 
@@ -76,7 +76,7 @@ D:\00.Data_AnPhuoc_Group   (chỉ trên máy chủ dữ liệu — parquet gốc
 
         ▼
 
-dist/BaoCao_TongHop.html   (~8–12 MB, tự chứa, offline 100%)
+04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html   (~8–12 MB, tự chứa, offline 100%)
 
         │
 
@@ -108,31 +108,31 @@ duyệt (`Array.filter` trên payload đã nhúng).
 
 BaoCao_TongHop/
 
-├── backend/
+├── xu_ly/
 
-│   ├── Update_Baocao_TongHop.py                 # ★ orchestrator: refresh → aggregate → validate → render
+│   ├── cap_nhat_bao_cao.py                 # ★ orchestrator: refresh → aggregate → validate → render
 
-│   ├── stages/
+│   ├── cac_buoc/
 
-│   │   ├── refresh_cache.py     # đọc D:\00.Data_AnPhuoc_Group → cache_sales.parquet
+│   │   ├── lam_moi_cache.py     # đọc D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group → cache_ban_hang.parquet
 
-│   │   ├── aggregate_ton.py     # parquet → payload Tồn (columnar + dict encoding)
+│   │   ├── tong_hop_ton.py     # parquet → payload Tồn (columnar + dict encoding)
 
-│   │   ├── aggregate_ban.py     # parquet → payload Bán (overview + top-N sản phẩm)
+│   │   ├── tong_hop_ban.py     # parquet → payload Bán (overview + top-N sản phẩm)
 
-│   │   └── validate.py          # so tổng Qty payload ↔ nguồn; fail nếu lệch > ngưỡng
+│   │   └── kiem_tra.py          # so tổng Qty payload ↔ nguồn; fail nếu lệch > ngưỡng
 
-│   └── render.py                # gzip+base64 payload, chèn vào shell/template.html
+│   └── xuat_html.py                # gzip+base64 payload, chèn vào giao_dien/mau_bao_cao.html
 
-├── shell/                       # "VỎ" — viết tay, KHÔNG phải output build
+├── giao_dien/                       # "VỎ" — viết tay, KHÔNG phải output build
 
-│   ├── template.html            # khung 2 tab + 1 placeholder <script id="payload">
+│   ├── mau_bao_cao.html            # khung 2 tab + 1 placeholder <script id="payload">
 
-│   ├── style.css                # 1 design system, scope sẵn #tab-ton / #tab-ban
+│   ├── giao_dien.css                # 1 design system, scope sẵn #tab-ton / #tab-ban
 
-│   ├── engine.js                # 1 engine: renderTon() + renderBan(); KHÔNG shim document
+│   ├── dong_co.js                # 1 engine: renderTon() + renderBan(); KHÔNG shim document
 
-│   ├── segments.js              # khai báo phân khúc báo cáo (business sửa được)
+│   ├── phan_khuc.js              # khai báo phân khúc báo cáo (business sửa được)
 
 │   └── vendor/
 
@@ -140,15 +140,15 @@ BaoCao_TongHop/
 
 ├── database/
 
-│   └── cache_sales.parquet      # trung gian — .gitignore
+│   └── cache_ban_hang.parquet      # trung gian — .gitignore
 
 ├── dist/
 
 │   └── BaoCao_TongHop.html      # ★ FILE DUY NHẤT upload lên Drive
 
-├── DESIGN.md                    # tài liệu này
+├── THIET_KE.md                    # tài liệu này
 
-└── OPERATIONS.md                # quy trình vận hành
+└── HUONG_DAN.md                # quy trình vận hành
 
 ```
 
@@ -158,9 +158,9 @@ BaoCao_TongHop/
 
 `build_report.py` (ghép file bằng regex), `build_standalone_html.py`,
 
-`frontend/static/js/app.js` + `frontend/static/css/style.css` (mã chết, mô tả API không có thật),
+`frontend/static/js/app.js` + `frontend/static/css/giao_dien.css` (mã chết, mô tả API không có thật),
 
-`frontend/static/ton_report_template.html` (đang là output build cũ bị nhiễm bẩn — dòng 13
+`frontend/static/ton_report_mau_bao_cao.html` (đang là output build cũ bị nhiễm bẩn — dòng 13
 
 `,#app-ban{...}` selector cụt, dòng 1626–1627 lặp listener), `tom-select.*` (vendor nhưng
 
@@ -182,7 +182,7 @@ không nạp), `server.py` (chỉ rebuild Bán từ cache cũ, không refresh d�
 
   <meta charset="utf-8">
 
-  <style> /* shell/style.css nhúng thẳng, ~30 KB — 1 design system */ </style>
+  <style> /* giao_dien/giao_dien.css nhúng thẳng, ~30 KB — 1 design system */ </style>
 
 </head><body>
 
@@ -212,7 +212,7 @@ không nạp), `server.py` (chỉ rebuild Bán từ cache cũ, không refresh d�
 
   <script> /* plotly-basic.min.js — nhúng 1 LẦN */ </script>
 
-  <script> /* shell/engine.js + shell/segments.js */ </script>
+  <script> /* giao_dien/dong_co.js + giao_dien/phan_khuc.js */ </script>
 
 </body></html>
 
@@ -232,7 +232,7 @@ không nạp), `server.py` (chỉ rebuild Bán từ cache cũ, không refresh d�
 
 | Plotly basic (bar/pie/scatter) | ~1 MB |
 
-| engine.js + segments.js | ~45 KB |
+| dong_co.js + phan_khuc.js | ~45 KB |
 
 | Payload Tồn — tổng hợp, columnar, gzip+base64 | 3–5 MB |
 
@@ -258,7 +258,7 @@ không nạp), `server.py` (chỉ rebuild Bán từ cache cũ, không refresh d�
 
 4. **gzip + base64, giải nén trong trình duyệt** bằng `DecompressionStream('gzip')`.
 
-   (Code này đã có sẵn trong `standalone_engine.js` nhưng là mã chết — payload không bao giờ
+   (Code này đã có sẵn trong `standalone_dong_co.js` nhưng là mã chết — payload không bao giờ
 
    chứa `prod_gz`. Chỉ cần nối lại đúng.)
 
@@ -280,11 +280,11 @@ Bỏ cách "ghép 2 HTML rời bằng regex + `document` giả" của `build_rep
 
 
 
-- **1 file `style.css`**, selector đặt tiền tố **ngay khi viết**: `#tab-ton .card`, `#tab-ban .card`.
+- **1 file `giao_dien.css`**, selector đặt tiền tố **ngay khi viết**: `#tab-ton .card`, `#tab-ban .card`.
 
   Không cần hàm `scope_css` bằng regex (hàm hiện tại còn không xử lý `@media`).
 
-- **1 file `engine.js`** export `renderTon(data.ton)` và `renderBan(data.ban)`.
+- **1 file `dong_co.js`** export `renderTon(data.ton)` và `renderBan(data.ban)`.
 
   `switchTab()` chỉ bật/tắt thuộc tính `hidden` và gọi render lần đầu (lazy).
 
@@ -426,7 +426,7 @@ Mỗi tab (Tồn / Bán) có thanh phân khúc riêng, trạng thái độc lậ
 
 
 
-### 6.2. Định nghĩa 5 phân khúc (theo giá trị THẬT trong `cache_sales.parquet`)
+### 6.2. Định nghĩa 5 phân khúc (theo giá trị THẬT trong `cache_ban_hang.parquet`)
 
 
 
@@ -474,7 +474,7 @@ Nhóm sản phẩm, xét theo thứ tự:  #1 chủ đạo → #2 Golf → #3 ph
 
 
 
-- **Loại Anamai/Bonjour khỏi #1–#4: CÓ** (`brand_exclude` như trong `segments.js`).
+- **Loại Anamai/Bonjour khỏi #1–#4: CÓ** (`brand_exclude` như trong `phan_khuc.js`).
 
 - **Đồ lót / áo ngực / quần lót / seamless:** phần lớn thuộc hai hiệu **Anamai / Bonjour**
 
@@ -488,7 +488,7 @@ Nhóm sản phẩm, xét theo thứ tự:  #1 chủ đạo → #2 Golf → #3 ph
 
 
 
-### 6.4. Khai báo — `shell/segments.js` (sửa được, không đụng engine)
+### 6.4. Khai báo — `giao_dien/phan_khuc.js` (sửa được, không đụng engine)
 
 
 
@@ -556,7 +556,7 @@ cùng cơ chế `Array.filter`, hỗ trợ `*_exclude` và (tùy chọn) `report
 
 
 
-## 7. `Update_Baocao_TongHop.py` — các stage
+## 7. `cap_nhat_bao_cao.py` — các stage
 
 
 
@@ -564,15 +564,15 @@ cùng cơ chế `Array.filter`, hỗ trợ `*_exclude` và (tùy chọn) `report
 
 |:---|:---|:---|
 
-| `refresh_cache` | DuckDB đọc System_sales + Contract_sales (N năm gần nhất, tính từ `MAX(Year)`) `LEFT JOIN` F_DataTracking theo `MaHang=item_code AND Operation=Operation` | Log số dòng join hụt + danh sách `MaHang` không khớp |
+| `lam_moi_cache` | DuckDB đọc System_sales + Contract_sales (N năm gần nhất, tính từ `MAX(Year)`) `LEFT JOIN` F_DataTracking theo `MaHang=item_code AND Operation=Operation` | Log số dòng join hụt + danh sách `MaHang` không khớp |
 
-| `aggregate_ban` | overview GROUP BY **+ `Product_group` + `price_type`** (§5); giữ `st`, `br`, `reg`, `nr` để phục vụ §13; sinh bảng phụ `active_stores`; product giữ top 2.000 mã + "Khác" | — |
+| `tong_hop_ban` | overview GROUP BY **+ `Product_group` + `price_type`** (§5); giữ `st`, `br`, `reg`, `nr` để phục vụ §13; sinh bảng phụ `active_stores`; product giữ top 2.000 mã + "Khác" | — |
 
-| `aggregate_ton` | đọc InventorySize + F_DataTracking + HHLC; phân loại `region_kind` (§14.1); tra `size_profile` (§14.3); chuẩn hóa `Dist_plan → dist_y/dist_m` (§14.5); tính `sold_30/60/90` theo mã; GROUP BY theo mọi chiều lọc **+ `Product_group`**; encode columnar + dict | Log mã hàng không map được `size_profile` / `Dist_plan` |
+| `tong_hop_ton` | đọc InventorySize + F_DataTracking + HHLC; phân loại `region_kind` (§14.1); tra `size_profile` (§14.3); chuẩn hóa `Dist_plan → dist_y/dist_m` (§14.5); tính `sold_30/60/90` theo mã; GROUP BY theo mọi chiều lọc **+ `Product_group`**; encode columnar + dict | Log mã hàng không map được `size_profile` / `Dist_plan` |
 
-| `validate` | So `SUM(Qty)` theo Year/SalesSource (bán) và `SUM(Qty_TonKho)` theo Brand/Region (tồn) giữa payload và parquet nguồn | **Dừng build** nếu lệch > 0,5% |
+| `kiem_tra` | So `SUM(Qty)` theo Year/SalesSource (bán) và `SUM(Qty_TonKho)` theo Brand/Region (tồn) giữa payload và parquet nguồn | **Dừng build** nếu lệch > 0,5% |
 
-| `render` | `json → gzip → base64`, chèn vào `shell/template.html` qua **1 placeholder literal** | Không regex đổi tên hàm, không scope CSS động |
+| `xuat_html` | `json → gzip → base64`, chèn vào `giao_dien/mau_bao_cao.html` qua **1 placeholder literal** | Không regex đổi tên hàm, không scope CSS động |
 
 
 
@@ -598,7 +598,7 @@ nhãn `"T7/2026"` **cứng**. Thiết kế mới: tính kỳ tham chiếu và m�
 
 ```bash
 
-# 1. Bỏ file parquet mới vào D:\00.Data_AnPhuoc_Group\...\<năm>\
+# 1. Bỏ file parquet mới vào D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group\...\<năm>\
 
 # 2. Build (1 lệnh — tự làm mới từ dữ liệu sống, tự dò kỳ mới nhất)
 
@@ -608,7 +608,7 @@ nhãn `"T7/2026"` **cứng**. Thiết kế mới: tính kỳ tham chiếu và m�
 
 # 3. Google Drive → chuột phải file cũ → "Quản lý phiên bản" →
 
-#    "Tải phiên bản mới lên" → chọn dist/BaoCao_TongHop.html
+#    "Tải phiên bản mới lên" → chọn 04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html
 
 #    → LINK CHIA SẺ KHÔNG ĐỔI; người nhận luôn lấy bản mới nhất
 
@@ -692,7 +692,7 @@ Kích thước phụ thuộc **số tổ hợp thực sự xuất hiện trong d
 
 |:--|:---|:---|
 
-| 1 | `standalone_engine.js:158` | Filter `sub_brand` lấy từ `getUniqueValues(7)` = cột **Brand**, không phải sub-brand. Sửa đúng cột hoặc bỏ filter. |
+| 1 | `standalone_dong_co.js:158` | Filter `sub_brand` lấy từ `getUniqueValues(7)` = cột **Brand**, không phải sub-brand. Sửa đúng cột hoặc bỏ filter. |
 
 | 2 | `renderYoYDetailTable` / `renderProductDetailTable` | "Sức Bán TB/Tháng" chia `params.months.length || 1`. Chọn năm không chọn tháng → chia 1 → "TB tháng" = tổng cả năm. Phải chia **số tháng thực có dữ liệu**. |
 
@@ -718,13 +718,13 @@ Kích thước phụ thuộc **số tổ hợp thực sự xuất hiện trong d
 
 |:--|:---|:---|
 
-| 1 | Dựng `shell/` sạch (template + 1 CSS + 1 engine), tách 2 tab đúng cách, không shim | Vỏ tái dùng được |
+| 1 | Dựng `giao_dien/` sạch (template + 1 CSS + 1 engine), tách 2 tab đúng cách, không shim | Vỏ tái dùng được |
 
-| 2 | `aggregate_*` columnar + `Product_group` + `render.py` nối lại đường gzip | File < 15 MB, mở không treo |
+| 2 | `aggregate_*` columnar + `Product_group` + `xuat_html.py` nối lại đường gzip | File < 15 MB, mở không treo |
 
-| 3 | `build.py` orchestrator + bỏ hardcode kỳ + `validate.py` | 1 lệnh, số liệu tin được |
+| 3 | `build.py` orchestrator + bỏ hardcode kỳ + `kiem_tra.py` | 1 lệnh, số liệu tin được |
 
-| 4 | `segments.js` + `applySegment()` + thanh nút phân khúc trên HTML | 5 phân khúc hoạt động |
+| 4 | `phan_khuc.js` + `applySegment()` + thanh nút phân khúc trên HTML | 5 phân khúc hoạt động |
 
 | 5 | Sửa bug mục 11 (sub_brand, TB/tháng, server) | Số đúng |
 
@@ -732,7 +732,7 @@ Kích thước phụ thuộc **số tổ hợp thực sự xuất hiện trong d
 
 | 7 | **Số Tồn chuyên sâu (§14):** tách khu vực/kho, tồn theo brand/khu vực/kho + tỉ trọng, drill tên hàng→mã hàng, size theo `size_profile`, kết nối HHLC, phân loại hàng mới PP 6 tháng, cờ bán 30/60/90 ngày, lát cắt theo thuộc tính/tên hàng/CH | Tab Tồn đủ phân tích |
 
-| 8 | Viết `OPERATIONS.md` theo quy trình thật + Drive versioning; xóa file chết | Tài liệu khớp code |
+| 8 | Viết `HUONG_DAN.md` theo quy trình thật + Drive versioning; xóa file chết | Tài liệu khớp code |
 
 
 
@@ -1000,7 +1000,7 @@ và Qty tồn theo từng cửa hàng.
 
 
 
-- Nguồn: `D:\00.Data_AnPhuoc_Group\03.Data_Parquest\07.Lenh_HHLC\<năm>\*.parquet`
+- Nguồn: `D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group\03.Data_Parquest\07.Lenh_HHLC\<năm>\*.parquet`
 
   (đã dùng trong `build_data.py`: `lc_map` / `lc_dict`).
 
@@ -1082,7 +1082,7 @@ Mỗi lát cắt hiển thị Qty tồn + % tổng + số mã hàng; áp phân k
 
 
 
-## Phụ lục A — Giá trị danh mục thật (từ `cache_sales.parquet`, để đánh dấu mapping)
+## Phụ lục A — Giá trị danh mục thật (từ `cache_ban_hang.parquet`, để đánh dấu mapping)
 
 
 

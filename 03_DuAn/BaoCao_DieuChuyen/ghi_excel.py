@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dc_writer.py — Ghi workbook 7 sheet, style REPLICATE theo DC_BaoCao_AP.py:
+"""ghi_excel.py — Ghi workbook 7 sheet, style REPLICATE theo DC_BaoCao_AP.py:
 header navy + viền xanh, banding xen kẽ, tô màu điều kiện theo cột, tab màu, freeze/auto-filter."""
 import pandas as pd
 from openpyxl import Workbook

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""dc_display.py — Dựng nội dung Dashboard + đổi tên cột hiển thị (không phụ thuộc tkinter,
+"""hien_thi.py — Dựng nội dung Dashboard + đổi tên cột hiển thị (không phụ thuộc tkinter,
 tách riêng để dễ test/tái sử dụng)."""
 import datetime as dt
-import dc_config as cfg
-import dc_geo as geo_mod
-import dc_compute as comp
+import tham_so as cfg
+import dia_ly as geo_mod
+import tinh_toan as comp
 
 # ---------------------------------------------------------------- Dựng nội dung Dashboard (Sheet 0)
 def build_dashboard_kwargs(csv_filename, df_sku, sheet4_disp, all_stores_geo, scope_regions, df_store_size=None):

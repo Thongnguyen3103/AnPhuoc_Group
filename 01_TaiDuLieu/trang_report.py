@@ -5,13 +5,13 @@ Web http://report.anphuoc.ap:8083 : đăng nhập + các báo cáo
   ban_hd      BC_NXK_CH_SL.aspx   -> Baocao_BanHD_<từ>_<đến>.csv    (mặc định 1/tháng -> hôm qua)
   ton_kho     TimKiemHH.aspx      -> TonKho_<kho>_<nhóm>.csv        (mặc định hôm qua, theo ma trận, bỏ file rỗng)
   luan_chuyen BC_LuanChuyen.aspx  -> RP_<mã kho>.csv                (kho + thời gian giống QLKD)
-Khoảng ngày có thể chọn tay trên giao diện (runner.py truyền vào các hàm jobs_*).
+Khoảng ngày có thể chọn tay trên giao diện (chay_ngam.py truyền vào các hàm jobs_*).
 """
 from selenium.common.exceptions import TimeoutException, UnexpectedAlertPresentException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
-from common import (
+from tien_ich_chung import (
     ACCOUNTS, SETTINGS, Job, choose, dump_debug, export_csv, log, month_range,
     months_back_range, set_dates, wait_idle, yesterday,
 )
@@ -35,7 +35,7 @@ def login(driver):
         raise RuntimeError(f"Đăng nhập web report thất bại: {(e.alert_text or '').strip()}")
     except TimeoutException:
         dump_debug(driver, "report_login_failed")
-        raise RuntimeError("Đăng nhập web report thất bại (kiểm tra config/accounts.json).")
+        raise RuntimeError("Đăng nhập web report thất bại (kiểm tra cau_hinh/tai_khoan.json).")
     wait_idle(driver)
     log.info("Đăng nhập web report thành công.")
 

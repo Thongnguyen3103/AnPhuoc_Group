@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-aggregate_ton.py — Stage 2: Tổng hợp dữ liệu Báo cáo Số Tồn & Đối soát Size cấp Cửa hàng
+tong_hop_ton.py — Stage 2: Tổng hợp dữ liệu Báo cáo Số Tồn & Đối soát Size cấp Cửa hàng
 - Đọc từ InventorySize.parquet
 - LEFT JOIN F_DataTracking.parquet để lấy đầy đủ thuộc tính
 - Đọc lệnh HHLC (07.Lenh_HHLC) để gắn cờ luân chuyển
@@ -20,15 +20,16 @@ import duckdb
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+from dung_chung import duong_dan
+
 STAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(STAGE_DIR)
 ROOT = os.path.dirname(BACKEND_DIR)
 
-DATA_ROOT = r'D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group'
-INVENTORY_FILE = os.path.join(DATA_ROOT, '03.Data_Parquest', '03.Inventory', 'InventorySize.parquet')
-TRACKING_FILE = os.path.join(DATA_ROOT, '02.Master', 'F_DataTracking.parquet')
-HHLC_GLOB = os.path.join(DATA_ROOT, '03.Data_Parquest', '07.Lenh_HHLC', '*', '*.parquet')
-CACHE_FILE = os.path.join(ROOT, 'database', 'cache_sales.parquet')
+INVENTORY_FILE = duong_dan.ton_kho_size
+TRACKING_FILE = duong_dan.data_tracking
+HHLC_GLOB = os.path.join(duong_dan.lenh_hhlc, '*', '*.parquet')
+CACHE_FILE = os.path.join(ROOT, 'du_lieu_tam', 'cache_ban_hang.parquet')
 
 KHO_LIST = {
     'Kho Tổng hợp', 'Kho AP', 'Kho PIE', 'Kho CNHN', 'Kho TB3 đồ lót',
@@ -103,7 +104,7 @@ CAT_GROUP_CORE_GR = {'Chemise', 'Áo Thun', 'Quần Tây', 'Quần Kaki', 'Quầ
 
 
 def classify_cat_group(group_report, product_group, item_name, brand):
-    """Phân 6 nhóm hàng cho Sheet 4 — KHỚP với CASE cat_group trong aggregate_ban.attr_sql."""
+    """Phân 6 nhóm hàng cho Sheet 4 — KHỚP với CASE cat_group trong tong_hop_ban.attr_sql."""
     gr = (group_report or '').strip()
     grl = gr.lower()
     pgl = (product_group or '').lower()

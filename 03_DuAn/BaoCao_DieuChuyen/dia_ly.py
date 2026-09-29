@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-dc_geo.py
+dia_ly.py
 Suy toạ độ từ địa chỉ (WARD_COORDS ú tiên, fallback PROVINCE_COORDS)
 Tính khoảng cách Haversine (km) giữa 2 cửa hàng.
 """
 import math
-import dc_geo_data as geo
+import du_lieu_dia_ly as geo
 
 
 def geocode_address(address, region_fallback=None):

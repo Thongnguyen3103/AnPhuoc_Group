@@ -1,6 +1,7 @@
 """Core data access for the Reallocation Pro Flask app."""
 import hashlib
 import os
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -8,15 +9,19 @@ from pathlib import Path
 import pandas as pd
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = APP_DIR.parent
-DATA_DIR = APP_DIR / "data"
-DB_FILE = PROJECT_DIR / "Reallocation_Database.xlsx"
-LOCK_FILE = PROJECT_DIR / "Reallocation_Database.xlsx.lock"
+DATA_DIR = PROJECT_DIR / "du_lieu"          # user, trang thai duyet, log, DB upload tay
+KET_QUA_DIR = Path(duong_dan.thu_muc_ket_qua("KiemSoat_TonKho"))   # 04_KetQua/KiemSoat_TonKho
+DB_FILE = KET_QUA_DIR / "Reallocation_Database.xlsx"
+LOCK_FILE = KET_QUA_DIR / "Reallocation_Database.xlsx.lock"
 
-USERS_FILE = APP_DIR / "transfer_review_users.csv"
-REVIEW_FILE = APP_DIR / "transfer_order_review_state.csv"
-AUDIT_FILE = APP_DIR / "transfer_review_audit_log.csv"
+USERS_FILE = DATA_DIR / "transfer_review_users.csv"
+REVIEW_FILE = DATA_DIR / "transfer_order_review_state.csv"
+AUDIT_FILE = DATA_DIR / "transfer_review_audit_log.csv"
 
 STATUS_LABELS = {"pending": "Pending", "approved": "Approved", "rejected": "Rejected"}
 ROLE_LABELS = {"viewer": "Viewer", "reviewer": "Reviewer", "admin": "Admin"}
@@ -39,7 +44,7 @@ def get_db_source():
 
 
 def is_db_rebuilding():
-    """Return True if build_database.py is currently writing the xlsx file."""
+    """Return True if xay_dung_database.py is currently writing the xlsx file."""
     return LOCK_FILE.exists()
 
 
@@ -119,7 +124,7 @@ def _str(df, cols):
 def load_inventory(source=None):
     """Load the web detail grid from Reallocation_Database.xlsx.
 
-    Lock-aware: if build_database.py is currently writing the file, we
+    Lock-aware: if xay_dung_database.py is currently writing the file, we
     return the stale cached copy (if available) instead of reading a
     partially-written file.  If no cache exists yet we retry up to 3 times
     with a 1-second pause before raising.
@@ -214,7 +219,7 @@ def _agg_records(df, keys, sort_by="ton", limit=None, extra_aggs=None):
 
 
 def build_summary(df):
-    """Build dashboard/report summaries expected by transfer_review_web.py."""
+    """Build dashboard/report summaries expected by web_duyet_dieu_chuyen.py."""
     if df.empty:
         empty = []
         return {

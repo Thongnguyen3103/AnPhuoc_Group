@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-aggregate_ban.py — Stage 3: Tổng hợp dữ liệu Báo cáo Số Bán
-- Đọc từ database/cache_sales.parquet
+tong_hop_ban.py — Stage 3: Tổng hợp dữ liệu Báo cáo Số Bán
+- Đọc từ du_lieu_tam/cache_ban_hang.parquet
 - Tổng hợp Overview (ov) gồm cả chiều Giao dịch (Nội dung: Bán / Đổi / Tặng / HĐ)
 - Bảng phụ active_stores (số cửa hàng có Qty > 0 theo kỳ & khu vực)
 - Chi tiết Top 2.000 mã hàng (prod) + metadata (meta)
@@ -22,7 +22,7 @@ STAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(STAGE_DIR)
 ROOT = os.path.dirname(BACKEND_DIR)
 
-CACHE_FILE = os.path.join(ROOT, 'database', 'cache_sales.parquet')
+CACHE_FILE = os.path.join(ROOT, 'du_lieu_tam', 'cache_ban_hang.parquet')
 
 
 def run(shared_dict=None):
@@ -32,7 +32,7 @@ def run(shared_dict=None):
     print('=' * 65)
 
     if not os.path.exists(CACHE_FILE):
-        raise FileNotFoundError(f'Không tìm thấy {CACHE_FILE}. Cần chạy refresh_cache trước!')
+        raise FileNotFoundError(f'Không tìm thấy {CACHE_FILE}. Cần chạy lam_moi_cache trước!')
 
     con = duckdb.connect(':memory:')
     con.execute(f"CREATE VIEW cache AS SELECT * FROM read_parquet('{CACHE_FILE}')")

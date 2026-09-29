@@ -1,12 +1,12 @@
 """
-Chạy các mục báo cáo đã chọn (giao diện app.py gọi file này, hoặc chạy tay / đặt lịch):
+Chạy các mục báo cáo đã chọn (giao diện giao_dien.py gọi file này, hoặc chạy tay / đặt lịch):
 
-    python src/runner.py                                  # chạy các mục đang tích trong settings.json
-    python src/runner.py --jobs qlkd ban_hang             # chỉ chạy các mục này
-    python src/runner.py --jobs ton_kho --reload-empty    # tải lại cả các ô tồn kho đã biết rỗng
-    python src/runner.py --jobs ban_hang --range-ban-hang 01/08/2026 31/08/2026   # tự chọn khoảng ngày
-    python src/runner.py --jobs ton_kho --date-ton-kho 20/09/2026                  # tồn kho ngày khác
-    python src/runner.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD + RP ngày khác
+    python chay_ngam.py                                  # chạy các mục đang tích trong thiet_lap.json
+    python chay_ngam.py --jobs qlkd ban_hang             # chỉ chạy các mục này
+    python chay_ngam.py --jobs ton_kho --reload-empty    # tải lại cả các ô tồn kho đã biết rỗng
+    python chay_ngam.py --jobs ban_hang --range-ban-hang 01/08/2026 31/08/2026   # tự chọn khoảng ngày
+    python chay_ngam.py --jobs ton_kho --date-ton-kho 20/09/2026                  # tồn kho ngày khác
+    python chay_ngam.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD + RP ngày khác
 
 Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)
       ban_hang = Baocao_BanHang      ban_hd = Baocao_BanHD      ton_kho = TonKho_<kho>_<nhóm>
@@ -20,12 +20,12 @@ import time
 
 from selenium.common.exceptions import TimeoutException
 
-from common import (
+from tien_ich_chung import (
     EMPTY_CACHE_FILE, SETTINGS, TMP_DOWNLOAD_DIR, NoDataError, create_driver, dismiss_alert,
     dump_debug, load_json, log, output_dir, save_json, setup_logging,
 )
-import site_qlkd
-import site_report
+import trang_qlkd as site_qlkd
+import trang_report as site_report
 
 ALL_JOBS = ("qlkd", "ban_hang", "ban_hd", "ton_kho")
 
@@ -140,7 +140,7 @@ def parse_date(text):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--jobs", nargs="+", choices=ALL_JOBS, help="Các mục cần chạy (mặc định theo settings.json)")
+    ap.add_argument("--jobs", nargs="+", choices=ALL_JOBS, help="Các mục cần chạy (mặc định theo thiet_lap.json)")
     ap.add_argument("--reload-empty", action="store_true", help="Tải lại cả các ô tồn kho đã biết rỗng")
     ap.add_argument("--range-qlkd", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày QLKD + RP, dd/mm/yyyy (mặc định 1/tháng cách đây months_back tháng -> hôm nay)")

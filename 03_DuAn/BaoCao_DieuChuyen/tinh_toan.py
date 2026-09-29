@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-dc_compute.py — Tính chỉ số Mục 5 (mã/CH/size), xác định trạng thái, nhóm hiệu suất,
+tinh_toan.py — Tính chỉ số Mục 5 (mã/CH/size), xác định trạng thái, nhóm hiệu suất,
 cờ BÁN HẾT, cửa sổ size, ma trận (Mục 9 & 12), và xác định Lần 1/2/3 (Mục 11).
 """
 import math
 import numpy as np
-import dc_config as cfg
+import tham_so as cfg
 
 
 # ---------------------------------------------------------------- KHPP group

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-refresh_cache.py — Stage 1: Làm mới cache_sales.parquet từ dữ liệu gốc
+lam_moi_cache.py — Stage 1: Làm mới cache_ban_hang.parquet từ dữ liệu gốc
 Đọc System_sales + Contract_sales (3 năm gần nhất) + F_DataTracking + A_Region.
 
 TỰ PHÁT HIỆN: khi chạy KHÔNG có --force-cache, so kỳ mới nhất (Year*100+Month)
@@ -16,24 +16,25 @@ import duckdb
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+from dung_chung import duong_dan
+
 STAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(STAGE_DIR)
 ROOT = os.path.dirname(BACKEND_DIR)
 
-DATA_ROOT = r'D:\00.Data_AnPhuoc_Group'
-SYSTEM_SALES_GLOB = os.path.join(DATA_ROOT, '03.Data_Parquest', '01.System_sales', '*', '*.parquet')
-CONTRACT_SALES_GLOB = os.path.join(DATA_ROOT, '03.Data_Parquest', '02.Contract_sales', '*', '*.parquet')
-TRACKING_FILE = os.path.join(DATA_ROOT, '02.Master', 'F_DataTracking.parquet')
-REGION_FILE = os.path.join(DATA_ROOT, '02.Master', 'A_Region.parquet')
+SYSTEM_SALES_GLOB = os.path.join(duong_dan.ban_le, '*', '*.parquet')
+CONTRACT_SALES_GLOB = os.path.join(duong_dan.ban_hop_dong, '*', '*.parquet')
+TRACKING_FILE = duong_dan.data_tracking
+REGION_FILE = duong_dan.region
 
-OUT_FILE = os.path.join(ROOT, 'database', 'cache_sales.parquet')
+OUT_FILE = os.path.join(ROOT, 'du_lieu_tam', 'cache_ban_hang.parquet')
 YEARS_BACK = 3
 
 
 def run(force=False):
     t0 = time.time()
     print('=' * 65)
-    print('  [STAGE 1] REFRESH CACHE (cache_sales.parquet)')
+    print('  [STAGE 1] REFRESH CACHE (cache_ban_hang.parquet)')
     print('=' * 65)
 
     con = duckdb.connect(':memory:')
@@ -120,7 +121,7 @@ def run(force=False):
     ) TO '{OUT_FILE}' (FORMAT PARQUET)
     """
 
-    print('   Đang trích xuất và lưu cache_sales.parquet...')
+    print('   Đang trích xuất và lưu cache_ban_hang.parquet...')
     con.execute(sql)
     n = con.execute(f"SELECT COUNT(*) FROM '{OUT_FILE}'").fetchone()[0]
     mb = os.path.getsize(OUT_FILE) / (1024 * 1024)

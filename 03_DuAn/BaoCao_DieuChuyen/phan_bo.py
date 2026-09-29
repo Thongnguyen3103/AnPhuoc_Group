@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-dc_allocate.py
+phan_bo.py
 Sinh lệnh điều chuyển chi tiết theo size
 Ghép nguồn theo khoảng cách.
 """
 import pandas as pd
-import dc_config as cfg
-import dc_compute as comp
+import tham_so as cfg
+import tinh_toan as comp
 
 
 def _sort_by_distance(candidates, dest_store, store_meta):
-    import dc_geo as geo
+    import dia_ly as geo
     dest_meta = store_meta.get(dest_store, {})
     dest_lat, dest_lon = dest_meta.get("Lat"), dest_meta.get("Lon")
 
@@ -72,7 +72,7 @@ def build_transfer_orders(df_sku, df_store, inv_by_size, size_weight_by_sku, siz
                 gom = stores_sku[stores_sku["Hanh_dong_L3"].isin(["ĐIỂM GOM CHÍNH", "ƯU TIÊN NHẬN"])]
                 gom = gom.sort_values(["Hanh_dong_L3", "Hieu_suat_ky"], ascending=[True, False])
             else:
-                # Chưa có Hiệu suất kỳ Lần 2 lưu trong hieu_suat_ky_history.json (chưa
+                # Chưa có Hiệu suất kỳ Lần 2 lưu trong du_lieu/lich_su_hieu_suat_ky.json (chưa
                 # chạy Lần 2 qua công cụ) — fallback: gom về CH có Hiệu suất kỳ cao nhất.
                 gom = stores_sku.sort_values("Hieu_suat_ky", ascending=False)
             gom = gom.head(cfg.GOM_DIEM_L3_MAX)

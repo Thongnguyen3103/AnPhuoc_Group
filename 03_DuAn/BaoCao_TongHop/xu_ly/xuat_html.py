@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-render.py — Stage 5: Đóng gói Payload và render file HTML tự chứa
+xuat_html.py — Stage 5: Đóng gói Payload và render file HTML tự chứa
 - GZIP + Base64 payload dữ liệu tổng hợp
 - Nhúng style.css, plotly-basic.min.js, segments.js, engine.js vào template.html
-- Xuất file duy nhất ra dist/BaoCao_TongHop.html (< 15 MB)
+- Xuất file duy nhất ra 04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html (< 15 MB)
 """
 import os
 import sys
@@ -16,19 +16,21 @@ from datetime import datetime
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+from dung_chung import duong_dan
+
 STAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = STAGE_DIR if os.path.basename(STAGE_DIR) == 'backend' else os.path.dirname(STAGE_DIR)
+BACKEND_DIR = STAGE_DIR
 ROOT = os.path.dirname(BACKEND_DIR)
 
-SHELL_DIR = os.path.join(ROOT, 'shell')
-DIST_DIR = os.path.join(ROOT, 'dist')
+SHELL_DIR = os.path.join(ROOT, 'giao_dien')
+DIST_DIR = duong_dan.thu_muc_ket_qua('BaoCao_TongHop')   # 04_KetQua/BaoCao_TongHop
 OUT_HTML = os.path.join(DIST_DIR, 'BaoCao_TongHop.html')
 
 
 def run(ton_payload, ban_payload, shared_dict, ref_year, ref_month):
     t0 = time.time()
     print('=' * 65)
-    print('  [STAGE 5] RENDER SELF-CONTAINED HTML (dist/BaoCao_TongHop.html)')
+    print('  [STAGE 5] RENDER SELF-CONTAINED HTML (04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html)')
     print('=' * 65)
 
     os.makedirs(DIST_DIR, exist_ok=True)
@@ -63,11 +65,11 @@ def run(ton_payload, ban_payload, shared_dict, ref_year, ref_month):
     print(f'   - Chuỗi Base64:       {b64_mb:.2f} MB')
 
     # 2. Đọc các tệp tin vỏ (Shell)
-    template_path = os.path.join(SHELL_DIR, 'template.html')
-    style_path = os.path.join(SHELL_DIR, 'style.css')
-    plotly_path = os.path.join(SHELL_DIR, 'vendor', 'plotly-basic.min.js')
-    segments_path = os.path.join(SHELL_DIR, 'segments.js')
-    engine_path = os.path.join(SHELL_DIR, 'engine.js')
+    template_path = os.path.join(SHELL_DIR, 'mau_bao_cao.html')
+    style_path = os.path.join(SHELL_DIR, 'giao_dien.css')
+    plotly_path = os.path.join(SHELL_DIR, 'thu_vien', 'plotly-basic.min.js')
+    segments_path = os.path.join(SHELL_DIR, 'phan_khuc.js')
+    engine_path = os.path.join(SHELL_DIR, 'dong_co.js')
 
     with open(template_path, 'r', encoding='utf-8') as f:
         html = f.read()
@@ -87,12 +89,12 @@ def run(ton_payload, ban_payload, shared_dict, ref_year, ref_month):
     # 3. Ghép nối trực tiếp (Inlining không regex)
     print('   Đang nhúng style, script và payload vào khung HTML...')
     # Nhúng CSS
-    html = html.replace('<link rel="stylesheet" href="style.css">', f'<style>\n{css_content}\n</style>')
+    html = html.replace('<link rel="stylesheet" href="giao_dien.css">', f'<style>\n{css_content}\n</style>')
 
     # Nhúng Payload Base64
     placeholder = '<!-- PAYLOAD_PLACEHOLDER -->'
     if placeholder not in html:
-        raise ValueError('Không tìm thấy placeholder <!-- PAYLOAD_PLACEHOLDER --> trong template.html!')
+        raise ValueError('Không tìm thấy placeholder <!-- PAYLOAD_PLACEHOLDER --> trong mau_bao_cao.html!')
     html = html.replace(placeholder, b64_str)
 
     # Nhúng Scripts
@@ -108,9 +110,9 @@ def run(ton_payload, ban_payload, shared_dict, ref_year, ref_month):
   </script>
     """
 
-    old_scripts = """  <script src="vendor/plotly-basic.min.js"></script>
-  <script src="segments.js"></script>
-  <script src="engine.js"></script>"""
+    old_scripts = """  <script src="thu_vien/plotly-basic.min.js"></script>
+  <script src="phan_khuc.js"></script>
+  <script src="dong_co.js"></script>"""
     html = html.replace(old_scripts, script_block)
 
     # 4. Ghi file thành phẩm ra dist

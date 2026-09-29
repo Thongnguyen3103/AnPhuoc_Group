@@ -4,7 +4,7 @@
 # Duong dan NGUON DU LIEU GOC (Lenh_HHLC, History_LC, TraKho, Region,
 # Sales, Inventory) KHONG con khai bao o day nua -> lay tu file dung
 # chung toan workspace: 01.Python_Projects/dung_chung/cau_hinh.yaml
-# (xem class DataSources trong xu_ly/cau_hinh.py).
+# (doc qua dung_chung.duong_dan trong xu_ly/cau_hinh.py).
 #
 # File nay chi con cau hinh RIENG cua bao cao LCHH.
 

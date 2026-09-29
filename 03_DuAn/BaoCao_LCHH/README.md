@@ -3,26 +3,30 @@
 ## Cấu trúc thư mục
 
 ```
-BaoCao_LCHH/
-  cau_hinh.yaml   - cấu hình RIÊNG của báo cáo LCHH (kỳ báo cáo, ngưỡng SLA, alias cửa hàng...)
-  src/                 - logic OOP dùng chung cho cả 2 entrypoint
-    config.py            AppConfig   - gộp cau_hinh.yaml + nguồn dữ liệu dùng chung
-    io_utils.py           hàm đọc/chuẩn hoá dữ liệu (read_many, key_norm, store_norm, ...)
-    pipeline.py           LCHHPipeline - đọc + đối chiếu Lệnh/History/TraKho -> KQ_LCHH.parquet
-    performance.py         PerformanceAnalyzer - tái sử dụng LCHHPipeline + doanh số + tồn kho
-  reports/              - script xuất Excel (đọc parquet từ 04_KetQua/BaoCao_LCHH/, ghi xlsx vào 04_KetQua/BaoCao_LCHH/bao_cao_excel/)
+03_DuAn/BaoCao_LCHH/
+  cau_hinh.yaml              - cấu hình RIÊNG của báo cáo LCHH (kỳ báo cáo, ngưỡng SLA, alias cửa hàng...)
+  CHAY_TAO_DU_LIEU.bat       - chạy 2 entrypoint bên dưới (hỏi tháng)
+  CHAY_XUAT_EXCEL.bat        - xuất 2 file Excel từ parquet
+  tao_du_lieu_lchh.py        - entrypoint mỏng: chạy LCHHPipeline
+  tao_du_lieu_hieu_suat.py   - entrypoint mỏng: chạy PerformanceAnalyzer
+  xu_ly/                     - logic OOP dùng chung cho cả 2 entrypoint
+    cau_hinh.py                AppConfig   - gộp cau_hinh.yaml + đường dẫn dùng chung
+    tien_ich.py                hàm đọc/chuẩn hoá dữ liệu (read_many, key_norm, store_norm, ...)
+    quy_trinh_lchh.py          LCHHPipeline - đọc + đối chiếu Lệnh/History/TraKho -> KQ_LCHH.parquet
+    hieu_suat.py               PerformanceAnalyzer - tái sử dụng LCHHPipeline + doanh số + tồn kho
+  bao_cao/                   - script xuất Excel
     xuat_excel_lchh.py
     xuat_excel_hieu_suat.py
-    refresh_report.bat
-  tao_du_lieu_lchh.py       - entrypoint mỏng: chạy LCHHPipeline
-  tao_du_lieu_hieu_suat.py  - entrypoint mỏng: chạy PerformanceAnalyzer
-  04_KetQua/BaoCao_LCHH/               - **1 nơi duy nhất** chứa mọi kết quả (parquet + reports/*.xlsx)
+
+04_KetQua/BaoCao_LCHH/       - **1 nơi duy nhất** chứa mọi kết quả
+  KQ_LCHH.parquet, KQ_LCHH_HieuSuat.parquet
+  bao_cao_excel/*.xlsx
 ```
 
 Đường dẫn **nguồn dữ liệu gốc** (`07.Lenh_HHLC`, `08.History_LC`, `09.TraKho`, `A_Region`,
-`01.System_sales`, `03.Inventory`) không còn khai báo trong project này nữa — chúng được khai
-báo DUY NHẤT một lần ở `../dung_chung/cau_hinh.yaml` (dùng chung cho mọi project trong
-`01.Python_Projects`) và được `xu_ly/cau_hinh.py` import qua class `DataSources`. Muốn đổi vị trí
+`01.System_sales`, `03.Inventory`) không khai báo trong project này — chúng được khai
+báo DUY NHẤT một lần ở `01.Python_Projects/dung_chung/cau_hinh.yaml` (dùng chung cho mọi project)
+và được `xu_ly/cau_hinh.py` đọc qua `dung_chung.duong_dan`. Muốn đổi vị trí
 kho dữ liệu gốc (đổi ổ đĩa, đổi cấu trúc thư mục...) chỉ cần sửa **một chỗ duy nhất** ở đó.
 
 ## Chạy
@@ -106,7 +110,7 @@ Cột `Note` từ file Lệnh đổi tên thành `ly_do` (đặt cuối). Region
 
 ### Region lấy từ đâu?
 
-Từ **master khu vực chuẩn hóa** `D:/00.Data_AnPhuoc_Group/02.Master/A_Region.parquet`
+Từ **master khu vực chuẩn hóa** `02.Master/A_Region.parquet` (key `region` trong dung_chung/cau_hinh.yaml)
 (`Store_name → Region`), map theo tên cửa hàng đã chuẩn hóa (bỏ khoảng trắng + in thường).
 File Lệnh không có sẵn Region. Toàn bộ 136 cửa hàng trong lệnh T8 đều khớp A_Region (0 thiếu).
 

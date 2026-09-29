@@ -19,11 +19,17 @@ def log(msg):
         print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] (log error)")
 
 # ── Đường dẫn ────────────────────────────────────────────────────────────────
-BASE_NETWORK        = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data")
-OUTPUT_FILE         = Path(r"D:\Python_Projects\Report_AnPhuoc\02.Inventory_Control\Reallocation_Database.xlsx")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
+BASE_NETWORK        = Path(duong_dan.phan_tich_o_mang)
+OUTPUT_FILE         = Path(duong_dan.thu_muc_ket_qua("KiemSoat_TonKho")) / "Reallocation_Database.xlsx"
 TRACKING_FILE       = BASE_NETWORK / r"1.Processed_data\1.Data_Tracking.xlsx"
-SYSTEM_SALES_FOLDER = Path(r"D:\DataBase\1.System_sales")
-INVENTORY_FILE      = Path(r"D:\DataBase\3.Inventory\InventorySize.csv")
+# So ban: file System_sales.csv do 02_XuLyDuLieu/CHAY_XUAT_CSV.bat xuat ra (05.Data_Csv/02.Raw)
+SYSTEM_SALES_FOLDER = Path(duong_dan.csv_xuat) / "02.Raw"
+SYSTEM_SALES_GLOB   = "System_sales*.csv"
+# Ton kho: doc thang InventorySize.parquet (03.Data_Parquest/03.Inventory)
+INVENTORY_FILE      = Path(duong_dan.ton_kho_size)
 HDD_FILE            = BASE_NETWORK / r"1.Processed_data\5.In_transit_stock_HDD.xlsx"
 
 REGION_COLUMNS = ["TP. HCM", "Hà Nội", "Miền Tây", "Miền Trung - TN", "Miền Đông"]
@@ -84,7 +90,7 @@ def load_data(report_item_names: list, d_category: pd.DataFrame, recent_months: 
 
     main_f = []; store_all_f = []; store_sz_f = []; store_rec_f = []
 
-    for path in SYSTEM_SALES_FOLDER.glob("*.csv"):
+    for path in SYSTEM_SALES_FOLDER.glob(SYSTEM_SALES_GLOB):
         log(f"  Reading {path.name}")
         
         # Đọc header trước để xác định cột thực tế nhằm tối ưu hóa dùng usecols
@@ -187,8 +193,8 @@ def load_data(report_item_names: list, d_category: pd.DataFrame, recent_months: 
         store_ban_size_recent = pd.DataFrame(columns=["Store_name", "Region", "MaHang", "Operation", "Size", "Ban_Recent_Size"])
 
     # Tồn kho
-    log("Reading InventorySize.csv")
-    inv = pd.read_csv(INVENTORY_FILE, dtype=str, keep_default_na=False)
+    log(f"Reading {INVENTORY_FILE.name}")
+    inv = pd.read_parquet(INVENTORY_FILE).fillna("").astype(str)
     inv.columns = [clean_name(c) for c in inv.columns]
     inv["MaHang"]    = inv["Mahang"].fillna("").astype(str).str.strip().str.upper()
     inv["Short_name"] = inv["MaHang"].str[:-4]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-validate.py — Stage 4: Kiểm tra và đối chiếu tính toàn vẹn của dữ liệu
+kiem_tra.py — Stage 4: Kiểm tra và đối chiếu tính toàn vẹn của dữ liệu
 - Đối chiếu SUM(Qty) của Bán giữa Payload và Parquet nguồn
 - Đối chiếu SUM(Qty_TonKho) của Tồn giữa Payload và Parquet nguồn
 - Dừng toàn bộ tiến trình build nếu sai lệch > 0.5%
@@ -12,13 +12,14 @@ import duckdb
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+from dung_chung import duong_dan
+
 STAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(STAGE_DIR)
 ROOT = os.path.dirname(BACKEND_DIR)
 
-DATA_ROOT = r'D:\00.Data_AnPhuoc_Group'
-INVENTORY_FILE = os.path.join(DATA_ROOT, '03.Data_Parquest', '03.Inventory', 'InventorySize.parquet')
-CACHE_FILE = os.path.join(ROOT, 'database', 'cache_sales.parquet')
+INVENTORY_FILE = duong_dan.ton_kho_size
+CACHE_FILE = os.path.join(ROOT, 'du_lieu_tam', 'cache_ban_hang.parquet')
 
 
 def run(ton_payload, ban_payload):

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-dc_pipeline.py — Ráp dữ liệu thô thành 4 bảng: SKU / CH / Size / (CH x Size).
+quy_trinh.py — Ráp dữ liệu thô thành 4 bảng: SKU / CH / Size / (CH x Size).
 """
 import pandas as pd
-import dc_config as cfg
-import dc_data as data
-import dc_compute as comp
+import tham_so as cfg
+import doc_du_lieu as data
+import tinh_toan as comp
 
 ACTION_DISPLAY_MAP = {
     "NHẬN ƯU TIÊN 1": "NHẬN ƯU TIÊN 1",
@@ -70,7 +70,7 @@ def round_window_months(dist_plan_str, khpp_group, lan):
 
 def build_all(con, combined_pks, scope_stores_df, forced_round_map=None, hieu_suat_state=None):
     """forced_round_map: {Combined_PK: 'Lan1'|'Lan2'|'Lan3'} — GHI ĐÈ Lần tự suy theo mốc KHPP.
-    hieu_suat_state: dict từ hieu_suat_ky_history.json, khoá 'PK|Store|Lan2' →
+    hieu_suat_state: dict từ du_lieu/lich_su_hieu_suat_ky.json, khoá 'PK|Store|Lan2' →
     {'hieu_suat_ky': ...} — mẫu số Xu hướng ở Lần 3 (Mục 12.1)."""
     hieu_suat_state = hieu_suat_state or {}
     forced_round_map = forced_round_map or {}

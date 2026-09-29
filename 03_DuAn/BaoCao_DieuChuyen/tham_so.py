@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-dc_config.py
+tham_so.py
 Tham số vận hành (Phụ lục C) + hằng số dùng chung
 Chỉnh các giá trị trong PARAMS khi Trưởng Bộ phận Điều chuyển cập nhật tham số.
 KHÔNG cần sửa logic ở các file khác.

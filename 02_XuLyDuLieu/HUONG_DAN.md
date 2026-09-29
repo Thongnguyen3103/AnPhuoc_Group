@@ -1,21 +1,32 @@
-# Hướng dẫn Pipeline Xử lý Dữ liệu — 01.Data_Xuly
+# Hướng dẫn Xử lý Dữ liệu — 02_XuLyDuLieu
 
-Tài liệu này mô tả **chức năng, nhiệm vụ và luồng chạy** của từng file Python trong dự án, để việc bảo trì/mở rộng sau này không phải đọc lại toàn bộ code.
-
-Dự án gồm 3 nhóm độc lập, không dùng chung code với nhau:
+Tài liệu này mô tả **chức năng, nhiệm vụ và luồng chạy** của từng file Python trong phần xử lý dữ liệu, để việc bảo trì/mở rộng sau này không phải đọc lại toàn bộ code.
 
 ```
-01.Data_Xuly/
-├── Report/        ← Pipeline chính: gộp dữ liệu bán/tồn/luân chuyển → Parquet
-├── Revenue/        ← Doanh thu theo ngày + chỉ tiêu (DuckDB riêng)
-└── Top_Seller/     ← Báo cáo Best/Slow Seller (đọc Parquet của Report/)
+02_XuLyDuLieu/
+├── CHAY_XU_LY.bat          ← menu chọn nguồn cần xử lý (chạy chay_tat_ca.py)
+├── CHAY_DOANH_THU.bat      ← cập nhật DuckDB doanh thu (doanh_thu.py)
+├── CHAY_XUAT_CSV.bat       ← xuất Parquet → CSV (xuat_csv_data_ap.py)
+├── chay_tat_ca.py          ← điểm chạy chính: 01.Source → 02.Master / 03.Data_Parquest
+├── xu_ly_theo_thang.py     ← khuôn chung MonthlySourceProcessor
+├── chuyen_xls_sang_xlsx.py ← đổi .xls → .xlsx (Excel COM) trước bước HDD
+├── xuat_csv_data_ap.py     ← Parquet → 05.Data_Csv (cho Power BI)
+├── doanh_thu.py            ← doanh thu ngày + chỉ tiêu + bill → Report_AP.duckdb
+└── nguon/                  ← mỗi file = 1 nguồn dữ liệu
 ```
+
+Dùng chung từ `01.Python_Projects/dung_chung/`:
+
+| File | Nhiệm vụ |
+|---|---|
+| **`cau_hinh.yaml`** + **`duong_dan.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, DuckDB, CSV export, ổ mạng...). Code dùng `duong_dan.nguon_ban_le`, `duong_dan.master`... Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa `cau_hinh.yaml`. |
+| **`doc_ghi_parquet.py`** | `load_master_table(name)` đọc 1 bảng lookup từ `02.Master/*.parquet`; `export_parquet_partitioned(df, dir_name, file_prefix)` xuất Parquet phân mảnh theo Năm/Tháng (mỗi tháng 1 file `<prefix>_<MM>.parquet`, chỉ ghi đè đúng tháng có dữ liệu mới). |
+| **`ngay_thang.py`** | `parse_date(series, fmt)` — parse cột ngày có định dạng tường minh (bỏ phần giờ), cảnh báo số dòng lỗi. |
+| **`quy_doi_size.py`** | `actual_size(system_size, report_item_name)` — quy đổi size hệ thống → size thực tế theo `SIZE_MAP`; `FEMALE_SIZE_MAP` riêng cho hàng Nữ/Jupe/Váy. Dùng chung cho **mọi** nguồn. |
 
 ---
 
-## 1. Report/ — Pipeline chính (nguồn dữ liệu → Parquet)
-
-### 1.1. Kiến trúc chung
+## 1. Kiến trúc chung
 
 Mọi nguồn "giao dịch theo tháng" (bán hàng, kho xuất, nhập SX, luân chuyển, trả kho...) đều theo cùng một khuôn:
 
@@ -24,160 +35,69 @@ Mọi nguồn "giao dịch theo tháng" (bán hàng, kho xuất, nhập SX, luâ
 → group theo các cột chiều (Store/Item/Size/Month...) → xuất Parquet phân mảnh theo Năm/Tháng
 ```
 
-Khuôn này được đóng gói trong `core/base_processor.py` (class `MonthlySourceProcessor`). Mỗi nguồn dữ liệu mới **chỉ cần viết 1 file mới trong `sources/`, kế thừa class này và cài đặt 3 phương thức** — không phải viết lại phần đọc thư mục, kiểm tra rỗng, hay xuất Parquet.
+Khuôn này nằm trong `xu_ly_theo_thang.py` (class `MonthlySourceProcessor`). Nguồn mới **chỉ cần 1 file trong `nguon/`, kế thừa class này và cài 3 phương thức** `load_lookups()`, `read_files()`, `transform()`.
 
-Hai nguồn không theo khuôn "giao dịch theo tháng" (mà là "snapshot toàn bộ") — `HDDProcessor` và `InventoryProcessor` — không kế thừa base class này, nhưng vẫn có cùng interface `run()` để `Run_all_data.py` gọi thống nhất.
+Hai nguồn dạng "snapshot toàn bộ" — `HDDProcessor` và `InventoryProcessor` — không kế thừa base class, nhưng có cùng interface `run()` để `chay_tat_ca.py` gọi thống nhất.
 
-### 1.2. core/ — Hạ tầng dùng chung
+## 2. nguon/ — Từng nguồn dữ liệu
 
-| File | Nhiệm vụ |
-|---|---|
-| **`core/paths.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, CSV export...). Class `Paths`. Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa ở đây, không sửa từng file `sources/`. |
-| **`core/base_processor.py`** | Class trừu tượng `MonthlySourceProcessor` (ABC). Định nghĩa khung xử lý chung: `_files()` (glob file nguồn) → `load_lookups()` → `read_files()` → `transform()` → xuất Parquet. Các processor con override 3 phương thức abstract: `load_lookups()`, `read_files()`, `transform()`. |
-| **`core/parquet_io.py`** | I/O Parquet dùng chung: `load_master_table(name)` đọc 1 bảng lookup từ `02.Master/*.parquet`; `export_parquet_partitioned(df, dir_name, file_prefix)` xuất DataFrame ra Parquet, phân mảnh theo Năm/Tháng (mỗi tháng 1 file `<prefix>_<MM>.parquet`, chỉ ghi đè đúng tháng có dữ liệu mới). |
-| **`core/date_utils.py`** | `parse_date(series, fmt)` — parse cột ngày dạng chuỗi có định dạng tường minh (bỏ phần giờ nếu có), cảnh báo số dòng parse lỗi. |
-| **`core/size_map.py`** | `actual_size(system_size, report_item_name)` — quy đổi size hệ thống → size thực tế (S/M/L/XL/XXL/3XL/DAT1-3/OneSize) theo `SIZE_MAP`; áp dụng riêng `FEMALE_SIZE_MAP` cho hàng Nữ/Jupe/Váy vì size số (5/7/9...) chỉ có nghĩa S/M/L với nhóm này. Dùng chung cho **mọi** nguồn dữ liệu. |
-
-**Khi thêm nguồn dữ liệu mới:** thêm đường dẫn vào `Paths`, tạo file mới trong `sources/` kế thừa `MonthlySourceProcessor`, rồi thêm 1 mục vào `MENU` trong `Run_all_data.py`.
-
-### 1.3. sources/ — Từng nguồn dữ liệu cụ thể
-
-| File | Class | Input | Output Parquet | Đặc điểm riêng |
+| File | Class | Input (key trong cau_hinh.yaml) | Output | Đặc điểm riêng |
 |---|---|---|---|---|
-| **`data_tracking.py`** | `DataTrackingProcessor` | `Data_Tracking.xlsx` + DMHH mới nhất (ổ Y:) + file xếp loại CH | `02.Master/{A_Region, B_Size, D_Category, C_BasicSizeChart, E_T-Shirt, F_DataTracking}.parquet` | **Làm mới các bảng danh mục/lookup (Master)** — nguồn cho `load_master_table()` của mọi processor khác. Luôn full-refresh, không phân mảnh theo tháng. Có logic chuẩn hoá tên category (`format_cat_text`), cập nhật xếp loại cửa hàng (`Store_rank`), phát hiện cặp SP Ngắn/Dài–Nam/Nữ (`compute_nd_pairs`), và báo cáo trùng khoá (`report_duplicates`). |
-| **`hdd.py`** | `HDDProcessor` | Folder `HDD_QLKD` (csv/xlsx) + `HDD_Report` | `02.Master/HDD_QLKD_Tong_hop.parquet` | Gộp 2 nguồn HDD (đối chiếu theo Số chứng từ trùng để tránh đếm 2 lần), tra danh mục/khu vực, đọc CSV với dò encoding linh hoạt (`robust_read_csv`). Snapshot toàn bộ, **không** kế thừa `MonthlySourceProcessor`. |
-| **`inventory.py`** | `InventoryProcessor` (module-level functions) | Folder tồn kho (csv/xlsx, cột `size_*`) + `HDD_QLKD_Tong_hop.parquet` | `03.Data_Parquest/03.Inventory/{InventorySize, Inventory}.parquet` | Unpivot các cột `size_25...size_FS` thành dòng (melt), gộp thêm HDD, xuất 2 bảng: có Size và không Size. Có cờ env `INVENTORY_KEEP_ZERO=1` để giữ dòng số lượng 0. Snapshot toàn bộ, không kế thừa base class. |
-| **`system_sales.py`** | `SystemSalesProcessor`, `ContractSalesProcessor` | `01.System_sales/`, `02.Contract_sales/` (csv) | `01.System_sales/`, `02.Contract_sales/` (Parquet theo năm/tháng) | Xử lý **Bán lẻ** và **Bán Hợp Đồng**. Trích mã CH từ `SoChungTu` (`extract_ma_ch`, có `STORE_CODE_ALIAS` cho mã cửa hàng cũ đã đổi tên). System_sales lọc `Nội dung` chỉ giữ Bán/Tặng/Đổi; Contract_sales không filter dòng. `robust_read_csv` tự phục hồi dòng bị dư field do dấu phẩy không escape trong cột `Kieu`. |
-| **`kho_xuat_ch.py`** | `KhoXuatCHProcessor` | `04.KhoXuat_CH/` (csv) | `04.KhoXuat_CH/` (Parquet) | Kho xuất ra cửa hàng. Trích mã kho xuất từ `SoChungTu` (`_extract_kho_xuat`), tra Region/Warehouse theo `TenCH_NHAP`. |
-| **`nhap_tu_sx.py`** | `NhapTuSXProcessor` | `05.NhapSX/` (csv) | `05.NhapSX/` (Parquet) | Hàng nhập từ sản xuất. `robust_read_csv` tự khôi phục dòng bị tách do dấu phẩy dư trong cột `Noidung` (index cột 17). |
-| **`history_lc.py`** | `HistoryLCProcessor` | `09.History_LC/` (csv) | `08.History_LC/` (Parquet) | Lịch sử luân chuyển — có cả cửa hàng gửi (`MaCH`) và nhận (`MaCH_N`), tra Region/Warehouse riêng cho từng chiều. Đọc CSV ưu tiên `utf-16`. |
-| **`tra_kho.py`** | `TraKhoProcessor` | `10.TraKho/` (csv) | `09.TraKho/` (Parquet) | Trả kho — chỉ giữ dòng `LyDo == "Nhập cửa hàng trả kho"`. `_read_csv_fixing_ragged_tail` gộp field dư luôn về **cột cuối** (khác cách xử lý của `nhap_tu_sx.py`/`kho_xuat_ch.py` vốn gộp về cột `Noidung` ở giữa). |
-| **`lenh_luan_chuyen.py`** | `LenhLuanChuyenProcessor` | Ổ mạng `HHLC_DIR` (`**/*.xlsx`) | `07.Lenh_HHLC/` (Parquet, prefix `KQ_HHLC`) | Lệnh điều chuyển hàng hóa — nguồn là Excel (không phải CSV) trên ổ mạng `\\hovmfs01\...`, dùng `file_glob = "**/*.xlsx"` (đệ quy) và lọc bỏ file tạm `~$...`. Đổi tên cột tiếng Việt → tiếng Anh qua `RENAME_MAP`. |
+| **`cap_nhat_master.py`** | `DataTrackingProcessor` | `data_tracking_excel` + DMHH mới nhất (`danh_muc_hang_hoa`) + file xếp loại CH (`xep_loai_cua_hang`) | `02.Master/{A_Region, B_Size, D_Category, C_BasicSizeChart, E_T-Shirt, F_DataTracking}.parquet` | **Làm mới bảng danh mục (Master)** — nguồn của `load_master_table()` cho mọi processor khác. Luôn full-refresh. |
+| **`hang_di_duong.py`** | `HDDProcessor` | `nguon_hdd_qlkd` + `nguon_hdd_report` | `02.Master/HDD_QLKD_Tong_hop.parquet` | Gộp 2 nguồn HDD (đối chiếu Số chứng từ trùng), dò encoding linh hoạt. |
+| **`ton_kho.py`** | `InventoryProcessor` | `nguon_ton_kho` + `HDD_QLKD_Tong_hop.parquet` | `03.Inventory/{InventorySize, Inventory}.parquet` | Unpivot cột `size_*` thành dòng, gộp HDD. Env `INVENTORY_KEEP_ZERO=1` để giữ dòng 0. |
+| **`ban_hang.py`** | `SystemSalesProcessor`, `ContractSalesProcessor` | `nguon_ban_le`, `nguon_ban_hop_dong` | `01.System_sales/`, `02.Contract_sales/` | Trích mã CH từ `SoChungTu` (`STORE_CODE_ALIAS` cho mã cũ). Bán lẻ chỉ giữ Bán/Tặng/Đổi. |
+| **`kho_xuat_cua_hang.py`** | `KhoXuatCHProcessor` | `nguon_kho_xuat_ch` | `06.KhoXuat_CH/` | Trích mã kho xuất từ `SoChungTu`, tra Region/Warehouse theo `TenCH_NHAP`. |
+| **`nhap_tu_san_xuat.py`** | `NhapTuSXProcessor` | `nguon_nhap_sx` | `05.NhapSX/` | Tự khôi phục dòng bị tách do dấu phẩy dư trong cột `Noidung`. |
+| **`lich_su_luan_chuyen.py`** | `HistoryLCProcessor` | `nguon_lich_su_lc` | `08.History_LC/` | Có cửa hàng gửi (`MaCH`) và nhận (`MaCH_N`). |
+| **`tra_kho.py`** | `TraKhoProcessor` | `nguon_tra_kho` | `09.TraKho/` | Chỉ giữ `LyDo == "Nhập cửa hàng trả kho"`; field dư gộp về cột cuối. |
+| **`lenh_luan_chuyen.py`** | `LenhLuanChuyenProcessor` | `hhlc_o_mang` (`**/*.xlsx`, ổ mạng) | `07.Lenh_HHLC/` (prefix `KQ_HHLC`) | Nguồn Excel, bỏ file tạm `~$...`, đổi tên cột qua `RENAME_MAP`. |
 
-**Quy ước chung giữa các `sources/*.py`:**
-- Mỗi processor có `robust_read_csv`/`robust_read_excel` riêng để tự dò encoding (ưu tiên `utf-16` cho file xuất từ hệ thống) và tự phục hồi dòng lỗi do dấu phẩy không escape.
-- Đều dùng `Short_name` (MaHang bỏ 4 ký tự cuối) để tra `D_Category`, và `actual_size()` để chuẩn hoá Size.
-- Đều lọc bỏ `Product_type` là "Bao Bì"/"Đồng Phục" và `Brand` là "Dv In Theu"/"Khác" (trừ `Contract_sales`, `KhoXuat_CH`, `NhapTuSX`, `HH_LuanChuyen` — không áp filter này).
+Output Parquet nằm dưới `03.Data_Parquest/` (key `parquet`).
 
-### 1.4. export/ — Xuất dữ liệu ra CSV
+**Quy ước chung:** mỗi processor có `robust_read_csv` riêng (ưu tiên `utf-16`, tự phục hồi dòng lỗi); dùng `Short_name` (MaHang bỏ 4 ký tự cuối) để tra `D_Category`; lọc bỏ `Product_type` "Bao Bì"/"Đồng Phục" và `Brand` "Dv In Theu"/"Khác" (trừ Contract_sales, KhoXuat_CH, NhapTuSX, HH_LuanChuyen).
 
-| File | Nhiệm vụ |
-|---|---|
-| **`export/data_ap.py`** | Class `ExportManager`. Đọc các bảng Parquet đã xử lý (System_sales, Contract_sales, Inventory, KhoXuat_CH, NhapTuSX, các bảng Master...) bằng DuckDB, xuất ra CSV vào `05.Data_Csv/{01.Master, 02.Raw}` cho Data_ReportAP. Có menu checkbox chọn bảng cần export (`select_exports_menu`), và cơ chế retry khi file đang bị khoá (`_write_csv_with_retry`, gỡ thuộc tính hidden/readonly qua `attrib`). Chạy trực tiếp: `python export/data_ap.py` (mặc định interactive). |
+## 3. chay_tat_ca.py — Điểm chạy chính
 
-### 1.5. utils/ — Công cụ hỗ trợ
+Chạy: double-click **`CHAY_XU_LY.bat`** (hoặc `python chay_tat_ca.py`).
 
-| File | Nhiệm vụ |
-|---|---|
-| **`utils/format_excel.py`** | Class `ExcelFormatConverter`. Convert file Excel 2003 (`.xls`) → `.xlsx` bằng Excel COM (`win32com`), chạy **trước** bước xử lý HDD_QLKD (vì `HDDProcessor` chỉ đọc `.csv`/`.xlsx`). Xoá sheet rỗng trước khi lưu. Chạy trực tiếp sẽ hỏi đường dẫn thư mục qua `input()`. |
+- Menu checkbox (↑↓ di chuyển, Space tích, Enter chạy, Esc/HỦY thoát).
+- `run_all()` chạy đúng thứ tự: Master → HDD + Tồn kho → Bán lẻ/Bán HĐ (dùng chung lookups) → Kho Xuất CH → Nhập từ SX → History_LC → Trả Kho → Lệnh Điều chuyển.
+- **Phụ thuộc:** Master phải chạy **trước** mọi processor khác. HDD phải chạy trước Tồn kho nếu muốn tồn có HDD mới nhất.
 
-### 1.6. Run_all_data.py — Điểm chạy chính (entry point)
-
-File điều phối toàn bộ pipeline, chạy trực tiếp bằng `python Run_all_data.py`.
-
-**Chức năng:**
-- Định nghĩa các hàm `run_*()` bọc quanh từng processor (có đo thời gian qua `timed()`).
-- `run_all()` — chạy toàn bộ theo đúng thứ tự: Master refresh → HDD+Tồn kho → Bán lẻ/Bán HĐ (dùng chung lookups đã load 1 lần) → Kho Xuất CH → Nhập từ SX → History_LC → Trả Kho → Lệnh Điều chuyển.
-- **Menu checkbox tương tác** (dùng `msvcrt`, chỉ chạy trên Windows): mũi tên ↑↓ di chuyển, Space tích/bỏ chọn mục cần chạy, Enter xác nhận, Esc/chọn "HỦY" để thoát không chạy gì.
-- `execute(indices)` — chạy các mục đã chọn; nếu chọn "Bán lẻ" và/hoặc "Bán HĐ" cùng lúc thì load lookups (`SystemSalesProcessor().load_lookups()`) chỉ 1 lần rồi tái sử dụng cho cả 2, tránh đọc lại Parquet Master 2 lần.
-
-**Cách chạy:**
-```bash
-cd Report
-python Run_all_data.py
-```
-Dùng ↑↓/Space chọn các mục cần cập nhật, Enter để chạy, hoặc tích "Tất cả" để chạy full pipeline.
-
-**Thứ tự phụ thuộc quan trọng:** `run_master_refresh()` (Data_Tracking) phải chạy **trước** mọi processor khác vì tất cả đều `load_master_table()` từ `02.Master/*.parquet`. `run_hdd_ton()` phải chạy trước nếu muốn `InventoryProcessor` có dữ liệu HDD mới nhất gộp vào tồn kho.
-
----
-
-## 2. Revenue/ — Doanh thu theo ngày
+## 4. Các script độc lập
 
 | File | Nhiệm vụ |
 |---|---|
-| **`Revenue/DoanhThu.py`** | Script độc lập (không dùng `core/` của Report/), ghi kết quả vào **DuckDB** (`D:\DataBase\DuckDB\Report_AP.duckdb`) thay vì Parquet. Gồm 3 bước chạy tuần tự trong `__main__`:<br>1. **`process_sales_data()`** — đọc file `.xls` "DOANH THU THEO NGÀY MM.YYYY" từ ổ mạng `Z:\...`, map cửa hàng qua `map_regions()`/`load_a_region_mapper()` (đọc bảng `A_Region` từ DuckDB `Database_AP.duckdb`, có `manual_overrides` cho các cửa hàng đặc biệt không khớp tự động), lưu vào table **`revenue`**.<br>2. **`process_target_data()`** — đọc chỉ tiêu doanh thu từ `DOANH THU CUA HANG NAM-2026.xlsx` (các sheet `THOP01`..`THOP12`), lưu vào table **`target`**.<br>3. **`process_sales_details()`** — đọc CSV System_sales chi tiết theo bill, gộp nhóm theo ngày/cửa hàng, lưu vào table **`bill_sales`**.<br>Có `robust_read_csv()` và `parse_date()` riêng (bản sao gần giống `core/date_utils.py` của Report/, không import chung). |
+| **`doanh_thu.py`** (`CHAY_DOANH_THU.bat`) | Ghi vào DuckDB `duckdb_report_ap`: (1) `process_sales_data()` — file `.xls` "DOANH THU THEO NGAY" (`doanh_thu_ngay_2026/2025`) → table `revenue`; (2) `process_target_data()` — `chi_tieu_cua_hang` → table `target`; (3) `process_sales_details()` — CSV bán chi tiết (`phan_tich_o_mang/2.System_sales`) → table `bill_sales`. Dùng bởi `03_DuAn/BaoCao_QLKD_Tuan`. |
+| **`xuat_csv_data_ap.py`** (`CHAY_XUAT_CSV.bat`) | Parquet đã xử lý → CSV trong `05.Data_Csv/{01.Master, 02.Raw}`. Menu chọn bảng, retry khi file bị khoá. `03_DuAn/KiemSoat_TonKho` đọc `02.Raw/System_sales.csv` từ đây. |
+| **`chuyen_xls_sang_xlsx.py`** | Convert `.xls` → `.xlsx` bằng Excel COM, chạy tự động trước bước HDD. |
 
-**Cách chạy:**
-```bash
-cd Revenue
-python DoanhThu.py
-```
-Chạy cả 3 bước liên tiếp (dòng cuối `__main__` chỉ gọi `process_sales_data()` + `process_target_data()` — `process_sales_details()` cần gọi riêng nếu cần).
-
----
-
-## 3. Top_Seller/ — Báo cáo Best/Slow Seller
-
-| File | Nhiệm vụ |
-|---|---|
-| **`Top_Seller/BaoCao_BanTopSaller.Slow.py`** | Đọc Parquet **`System_sales`** (do `Report/sources/system_sales.py` xuất ra, tại `03.Data_Parquest/01.System_sales/{2025,2026}/`) + `F_DataTracking.parquet`, `E_T-Shirt.parquet` từ `02.Master/`, tính báo cáo **Bán chạy (Best Seller)** hoặc **Bán chậm (Slow Seller)**. Xuất file Excel vào `07.Report/`.<br>Có 2 chế độ chạy:<br>- `python Run_Report.py` → **GUI** (Tkinter, hàm `run_gui_mode()`)<br>- `python Run_Report.py --cli` → **CLI** (hàm `run_cli_mode()`)<br>Tham số lọc: loại báo cáo, nhóm thời gian (Tháng/Quý), khu vực, lọc theo tháng KHPP (kế hoạch phân phối), năm xuất. Hàm chính `run_processing(report_type, time_grouping, region, khpp_filter, export_year, log_func)` thực hiện toàn bộ logic đọc → merge → tính toán → xuất Excel (dùng `xlsxwriter`, có retry nếu file đang mở). |
-
-**Cách chạy:**
-```bash
-cd Top_Seller
-python "BaoCao_BanTopSaller.Slow.py"          # GUI
-python "BaoCao_BanTopSaller.Slow.py" --cli    # CLI
-```
-
-**Phụ thuộc:** Cần `Report/Run_all_data.py` đã chạy trước (ít nhất mục Master + Bán lẻ) để có đủ Parquet trong `03.Data_Parquest/01.System_sales/`.
-
----
-
-## 4. Sơ đồ luồng dữ liệu tổng thể
+## 5. Sơ đồ luồng dữ liệu
 
 ```
-                          ┌─────────────────────┐
-                          │  Data_Tracking.xlsx  │
-                          │  + DMHH (ổ Y:)       │
-                          │  + Xếp loại CH       │
-                          └──────────┬───────────┘
-                                     │ data_tracking.py
-                                     ▼
-                     02.Master/*.parquet (A_Region, D_Category,
-                     B_Size, C_BasicSizeChart, E_T-Shirt, F_DataTracking)
-                                     │
-              ┌──────────────────────┼───────────────────────────┐
-              │ load_master_table()  │ (mọi processor dưới đều đọc từ đây)
-              ▼                      ▼                           ▼
-   ┌─────────────────┐   ┌────────────────────┐      ┌──────────────────────┐
-   │ hdd.py           │   │ system_sales.py     │      │ kho_xuat_ch.py        │
-   │ → HDD_QLKD_      │   │ nhap_tu_sx.py       │      │ history_lc.py         │
-   │   Tong_hop        │   │ tra_kho.py          │      │ lenh_luan_chuyen.py   │
-   │   (02.Master)     │   └──────────┬──────────┘      └───────────┬───────────┘
-   └─────────┬─────────┘              │                             │
-             │                        ▼                             ▼
-             ▼               03.Data_Parquest/                03.Data_Parquest/
-   ┌─────────────────┐       01.System_sales/                04.KhoXuat_CH/, 05.NhapSX/
-   │ inventory.py      │      02.Contract_sales/              08.History_LC/, 09.TraKho/
-   │ → Inventory,       │                                     07.Lenh_HHLC/
-   │   InventorySize     │
-   │   (03.Inventory)    │
-   └─────────────────┘
-             │
-             ▼
-   ┌──────────────────────────┐        ┌───────────────────────────┐
-   │ export/data_ap.py          │        │ Top_Seller/               │
-   │ → 05.Data_Csv/ (CSV)       │        │ BaoCao_BanTopSaller.py    │
-   └──────────────────────────┘        │ → 07.Report/*.xlsx        │
-                                        └───────────────────────────┘
+01_TaiDuLieu (tải web)
+      │
+      ▼
+00.Data_AnPhuoc_Group/01.Source/*  ──►  02_XuLyDuLieu/chay_tat_ca.py
+                                              │
+          ┌───────────────────────────────────┼───────────────────────────┐
+          ▼                                   ▼                           ▼
+   02.Master/*.parquet              03.Data_Parquest/*            (xuat_csv_data_ap.py)
+   (cap_nhat_master,                (ban_hang, ton_kho,            05.Data_Csv/*.csv
+    hang_di_duong)                   kho_xuat, lich_su_lc...)
+          │                                   │
+          └──────────────┬────────────────────┘
+                         ▼
+                 03_DuAn/* (báo cáo)  ──►  04_KetQua/<TenDuAn>/
 
-   (Độc lập — không dùng Parquet trên)
-   ┌──────────────────────────┐
-   │ Revenue/DoanhThu.py         │
-   │ → DuckDB Report_AP.duckdb    │
-   │   (revenue, target,          │
-   │    bill_sales)                │
-   └──────────────────────────┘
+doanh_thu.py ──► 04.Data_Db/01.Data_DuckDB/Report_AP.duckdb ──► 03_DuAn/BaoCao_QLKD_Tuan
 ```
 
----
+## 6. Ghi chú khi bảo trì / mở rộng
 
-## 5. Ghi chú khi bảo trì / mở rộng
-
-- **Đổi đường dẫn:** chỉ sửa `Report/core/paths.py` (class `Paths`). File `Revenue/DoanhThu.py` và `Top_Seller/...py` khai đường dẫn riêng ngay đầu file (không dùng `Paths` chung).
-- **Thêm nguồn dữ liệu "giao dịch theo tháng" mới:** tạo file trong `Report/sources/`, kế thừa `MonthlySourceProcessor`, khai `source_dir`, `output_dir_name`, `file_prefix`, cài `load_lookups()`/`read_files()`/`transform()`, rồi thêm vào `MENU` của `Run_all_data.py`.
-- **Đổi quy tắc quy đổi Size:** sửa `SIZE_MAP`/`FEMALE_SIZE_MAP` trong `core/size_map.py` — áp dụng ngay cho toàn bộ nguồn dữ liệu.
-- **Danh mục/khu vực sai:** kiểm tra `data_tracking.py` (nguồn của `D_Category`, `A_Region`...) — sửa lỗi lookup ở đây trước khi sửa logic từng processor riêng, vì mọi nguồn khác đều merge dựa trên các bảng này.
-- **File CSV đọc lỗi/dòng bị mất:** mỗi `sources/*.py` có `robust_read_csv` riêng — kiểm tra đúng cột nào hay bị dính dấu phẩy chưa escape (`Kieu`, `Noidung`...) trước khi sửa logic gộp field.
-- **`Revenue/` và `Top_Seller/`** không chia sẻ code với `Report/core/` — nếu sửa logic chung (ví dụ `parse_date`, `actual_size`) cần thiết áp dụng cho cả 3 nhóm, phải sửa từng nơi (chưa được refactor dùng chung).
+- **Đổi đường dẫn:** chỉ sửa `dung_chung/cau_hinh.yaml`. Chạy `python -m dung_chung.duong_dan` (từ thư mục `01.Python_Projects`) để kiểm tra đường dẫn nào đang không tồn tại.
+- **Thêm nguồn "giao dịch theo tháng" mới:** thêm key đường dẫn vào `cau_hinh.yaml`, tạo file trong `nguon/` kế thừa `MonthlySourceProcessor` (khai `source_dir`, `output_dir_name`, `file_prefix`), rồi thêm vào `MENU` của `chay_tat_ca.py`.
+- **Đổi quy tắc Size:** sửa `dung_chung/quy_doi_size.py` — áp dụng cho toàn bộ nguồn.
+- **Danh mục/khu vực sai:** kiểm tra `nguon/cap_nhat_master.py` trước, vì mọi nguồn khác merge dựa trên bảng Master.
+- **File CSV đọc lỗi/mất dòng:** mỗi `nguon/*.py` có `robust_read_csv` riêng — kiểm tra cột hay dính dấu phẩy (`Kieu`, `Noidung`...).

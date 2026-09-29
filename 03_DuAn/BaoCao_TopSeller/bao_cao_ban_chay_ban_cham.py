@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Run_Report.py — Hệ thống xử lý báo cáo Best Seller & Slow Seller PKD
+bao_cao_ban_chay_ban_cham.py — Hệ thống xử lý báo cáo Best Seller & Slow Seller PKD
 Tác giả: Thong.Nguyen | An Phước Group
-Chạy: python Run_Report.py          → Giao diện đồ họa (GUI)
-      python Run_Report.py --cli    → Giao diện dòng lệnh (CLI)
+Chạy: python bao_cao_ban_chay_ban_cham.py          → Giao diện đồ họa (GUI)
+      python bao_cao_ban_chay_ban_cham.py --cli    → Giao diện dòng lệnh (CLI)
 """
 import os, glob, re, sys, io, time, threading, warnings
 import pandas as pd
@@ -22,10 +22,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # ─────────────────────────────────────────────
 #  CẤU HÌNH ĐƯỜNG DẪN
 # ─────────────────────────────────────────────
-FOLDER_BAN_2025 = r"D:\00.Data_AnPhuoc_Group\03.Data_Parquest\01.System_sales\2025"
-FOLDER_BAN_2026 = r"D:\00.Data_AnPhuoc_Group\03.Data_Parquest\01.System_sales\2026"
-MASTER_DIR      = r"D:\00.Data_AnPhuoc_Group\02.Master"
-OUT_DIR         = r"D:\00.Data_AnPhuoc_Group\07.Report"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # 01.Python_Projects (dung_chung)
+from dung_chung import duong_dan  # noqa: E402
+
+FOLDER_BAN_2025 = os.path.join(duong_dan.ban_le, "2025")
+FOLDER_BAN_2026 = os.path.join(duong_dan.ban_le, "2026")
+MASTER_DIR      = duong_dan.master
+OUT_DIR         = duong_dan.thu_muc_ket_qua("BaoCao_TopSeller")   # 04_KetQua/BaoCao_TopSeller
 
 # ─────────────────────────────────────────────
 #  HÀM TIỆN ÍCH
@@ -416,7 +419,7 @@ def run_processing(report_type, time_grouping, region, khpp_filter, export_year=
     df["X"] = df.apply(_x, axis=1)
 
     # ── 11. FRONT VIEW ────────────────────────────────────────
-    img_base = r"D:\00.Data_AnPhuoc_Group\06.Data_Images"
+    img_base = duong_dan.hinh_anh
     df["Front view"] = img_base + "\\" + df["MaHang"].astype(str) + " T.PNG"
 
     # ── 12. XÓA CỘT PHỤ & SẮP XẾP CỘT ──────────────────────

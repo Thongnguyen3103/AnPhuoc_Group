@@ -22,12 +22,13 @@ Hệ thống được thiết kế theo góc nhìn **Chuyên gia Phân tích D�
 ## 3. Cách Sử Dụng & Đồng Bộ Dữ Liệu Tự Động
 
 ### Cách 1: Chạy 1-Click (Khuyên dùng)
-- Click đúp chuột vào file **`refresh_report.bat`**.
+- Click đúp chuột vào file **`CHAY_XUAT_EXCEL.bat`** (ở thư mục BaoCao_LCHH).
 - Màn hình console sẽ tự động đọc dữ liệu mới nhất từ `04_KetQua/BaoCao_LCHH/KQ_LCHH.parquet`, tính toán KPI và xuất file Excel trong vòng 2-3 giây.
 
 ### Cách 2: Chạy bằng lệnh Python
 ```bash
-"C:\Users\THONG SL\anaconda3\python.exe" "d:\01.Python_Projects\BaoCao_LCHH\lchh_analytics\generate_excel_report.py"
+"C:\Users\THONG SL\anaconda3\python.exe" bao_cao\xuat_excel_lchh.py
+"C:\Users\THONG SL\anaconda3\python.exe" bao_cao\xuat_excel_hieu_suat.py
 ```
 
 ---
@@ -35,7 +36,7 @@ Hệ thống được thiết kế theo góc nhìn **Chuyên gia Phân tích D�
 ## 4. Vị Trí File Báo Cáo Excel Đầu Ra
 
 Tất cả báo cáo Excel được lưu tự động trong thư mục:
-📂 `d:\01.Python_Projects\BaoCao_LCHH\lchh_analytics\reports\`
+📂 `01.Python_Projects\04_KetQua\BaoCao_LCHH\bao_cao_excel\`
 
 1. **`BaoCao_PhanTich_LCHH_Latest.xlsx`**: File luôn chứa dữ liệu kỳ mới nhất (dùng để ghim/mở nhanh).
 2. **`BaoCao_PhanTich_LCHH_YYYY_MM.xlsx`**: File lưu trữ lịch sử theo từng tháng/năm cụ thể (ví dụ: `BaoCao_PhanTich_LCHH_2026_08.xlsx`).

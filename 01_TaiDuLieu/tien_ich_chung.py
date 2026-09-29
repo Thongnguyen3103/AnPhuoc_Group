@@ -24,14 +24,14 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 
 # ----------------------------------------------------------------------------- đường dẫn
-ROOT = Path(__file__).resolve().parent.parent
-CONFIG_DIR = ROOT / "config"
-DATA_DIR = ROOT / "data"
+ROOT = Path(__file__).resolve().parent
+CONFIG_DIR = ROOT / "cau_hinh"
+DATA_DIR = ROOT / "du_lieu"
 LOG_DIR = DATA_DIR / "logs"
 DEBUG_DIR = DATA_DIR / "debug"
 TMP_DOWNLOAD_DIR = DATA_DIR / "_tmp_download"
-SETTINGS_FILE = CONFIG_DIR / "settings.json"
-ACCOUNTS_FILE = CONFIG_DIR / "accounts.json"
+SETTINGS_FILE = CONFIG_DIR / "thiet_lap.json"
+ACCOUNTS_FILE = CONFIG_DIR / "tai_khoan.json"
 EMPTY_CACHE_FILE = DATA_DIR / "empty_cache.json"
 
 

@@ -20,11 +20,11 @@ import pandas as pd
 import numpy as np
 from flask import Flask, redirect, request, session, send_file, flash, Response, jsonify
 
-from inventory_core import (
+from du_lieu_ton_kho import (
     load_users, check_password_hash, generate_password_hash, save_users,
     load_inventory, build_summary, load_transfer_orders, merge_transfer_with_review,
     update_review, recent_audit_rows, STATUS_LABELS, ROLE_LABELS, get_db_source, DATA_DIR,
-    set_db_lock, is_db_rebuilding
+    set_db_lock, is_db_rebuilding, duong_dan
 )
 
 app = Flask(__name__)
@@ -33,7 +33,7 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
-TRACKING_FILE = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Analysis_data\1.Processed_data\1.Data_Tracking.xlsx")
+TRACKING_FILE = Path(duong_dan.phan_tich_o_mang) / "1.Processed_data" / "1.Data_Tracking.xlsx"
 
 # Thread-safe pipeline logs
 _pipeline_logs = []
@@ -742,7 +742,7 @@ def run_pipeline_thread(selected_items, months, selected_regions):
 
     try:
         # Construct arguments
-        cmd = [sys.executable, str(Path("../app/build_database.py").resolve())]
+        cmd = [sys.executable, str(_D / "xay_dung_database.py")]
         cmd.extend(["--items", ",".join(selected_items)])
         cmd.extend(["--months", str(months)])
         if selected_regions:
@@ -856,7 +856,7 @@ def get_image(mahang):
     import urllib.parse, mimetypes
     mahang = urllib.parse.unquote(mahang).strip().upper()
     
-    base_dir = Path(r"\\hovmfs01\PKD\PhanPhoi\Thong.Nguyen\Report_BestSeller\03.Hinh_anh_sp")
+    base_dir = Path(duong_dan.hinh_anh_san_pham)
     if not base_dir.exists():
         return "Image Directory Not Found", 404
         

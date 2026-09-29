@@ -1,15 +1,15 @@
 # KIẾN TRÚC & THAM CHIẾU KỸ THUẬT — BÁO CÁO TỔNG HỢP (TỒN & SỐ BÁN) AN PHƯỚC
 
 > **Tài liệu "as-built"** — mô tả đúng hệ thống hiện tại (sau các vòng chỉnh sửa).
-> Cập nhật: 10/09/2026. Nếu lệch với `DESIGN.md` (bản thiết kế mục tiêu, viết trước) thì **tài liệu này đúng**.
+> Cập nhật: 10/09/2026. Nếu lệch với `THIET_KE.md` (bản thiết kế mục tiêu, viết trước) thì **tài liệu này đúng**.
 
 ---
 
 ## 0. Tóm tắt 30 giây
 
 - Đây là **trình sinh báo cáo tĩnh** (static report generator), **không phải web app**.
-- Chạy Python **1 lần lúc build** trên máy có kết nối kho dữ liệu `D:\00.Data_AnPhuoc_Group`.
-- Kết quả: **1 file duy nhất** `dist/BaoCao_TongHop.html` (~13 MB, tự chứa 100%, chạy offline, không CDN/server).
+- Chạy Python **1 lần lúc build** trên máy có kết nối kho dữ liệu `D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group`.
+- Kết quả: **1 file duy nhất** `04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html` (~13 MB, tự chứa 100%, chạy offline, không CDN/server).
 - Người xem: tải file từ Google Drive → mở bằng Chrome/Edge/Cốc Cốc → mọi thao tác lọc chạy bằng JavaScript trong trình duyệt.
 
 ### Lệnh chạy duy nhất
@@ -17,10 +17,10 @@
 ```powershell
 # Dùng cho MỌI trường hợp — kể cả khi vừa thêm/sửa file parquet bán.
 # Stage 1 tự phát hiện dữ liệu bán mới (so kỳ + số dòng nguồn vs cache) và tự nạp lại.
-& "C:\Users\THONG SL\anaconda3\python.exe" backend\Update_Baocao_TongHop.py
+& "C:\Users\THONG SL\anaconda3\python.exe" xu_ly\cap_nhat_bao_cao.py
 
 # Chỉ dùng khi muốn ÉP tạo lại cache từ đầu (nghi ngờ cache hỏng)
-& "C:\Users\THONG SL\anaconda3\python.exe" backend\Update_Baocao_TongHop.py --force-cache
+& "C:\Users\THONG SL\anaconda3\python.exe" xu_ly\cap_nhat_bao_cao.py --force-cache
 ```
 
 > Luôn dùng đường dẫn đầy đủ tới Python Anaconda. Lệnh `python` trần trên Windows có thể trỏ vào stub Microsoft Store.
@@ -33,38 +33,38 @@
 
 ```
 BaoCao_TongHop/
-├── ARCHITECTURE.md          ← tài liệu này (as-built)
-├── DESIGN.md                ← bản thiết kế mục tiêu (viết trước, tham khảo lịch sử)
-├── OPERATIONS.md            ← quy trình vận hành / upload Drive
+├── KIEN_TRUC.md          ← tài liệu này (as-built)
+├── THIET_KE.md                ← bản thiết kế mục tiêu (viết trước, tham khảo lịch sử)
+├── HUONG_DAN.md            ← quy trình vận hành / upload Drive
 ├── requirements.txt         ← pandas, pyarrow, duckdb
 │
-├── backend/                 ← CODE PYTHON — chỉ chạy lúc build
-│   ├── Update_Baocao_TongHop.py ← ★ ORCHESTRATOR: chạy 5 stage tuần tự (đổi tên từ build.py)
-│   ├── render.py            ← Stage 5: gzip+base64 payload, nhúng vào shell → dist/
-│   └── stages/
-│       ├── refresh_cache.py ← Stage 1: đọc parquet gốc → database/cache_sales.parquet
-│       ├── aggregate_ban.py ← Stage 3: tổng hợp SỐ BÁN (chạy trước aggregate_ton)
-│       ├── aggregate_ton.py ← Stage 2: tổng hợp SỐ TỒN + metadata SKU
-│       └── validate.py      ← Stage 4: đối chiếu tổng Qty payload ↔ nguồn (dừng nếu lệch > 0.5%)
+├── xu_ly/                 ← CODE PYTHON — chỉ chạy lúc build
+│   ├── cap_nhat_bao_cao.py ← ★ ORCHESTRATOR: chạy 5 stage tuần tự (đổi tên từ build.py)
+│   ├── xuat_html.py            ← Stage 5: gzip+base64 payload, nhúng vào shell → dist/
+│   └── cac_buoc/
+│       ├── lam_moi_cache.py ← Stage 1: đọc parquet gốc → du_lieu_tam/cache_ban_hang.parquet
+│       ├── tong_hop_ban.py ← Stage 3: tổng hợp SỐ BÁN (chạy trước aggregate_ton)
+│       ├── tong_hop_ton.py ← Stage 2: tổng hợp SỐ TỒN + metadata SKU
+│       └── kiem_tra.py      ← Stage 4: đối chiếu tổng Qty payload ↔ nguồn (dừng nếu lệch > 0.5%)
 │
-├── shell/                   ← "VỎ" — viết tay, KHÔNG phải output build
-│   ├── template.html        ← khung 2 Phần × 4 Sheet + placeholder <!-- PAYLOAD_PLACEHOLDER -->
-│   ├── style.css            ← 1 design system
-│   ├── engine.js            ← ★ toàn bộ logic render (2738 dòng)
-│   ├── segments.js          ← khai báo 6 phân khúc — ⚠️ HIỆN CHƯA ĐƯỢC ENGINE DÙNG (xem §8)
+├── giao_dien/                   ← "VỎ" — viết tay, KHÔNG phải output build
+│   ├── mau_bao_cao.html        ← khung 2 Phần × 4 Sheet + placeholder <!-- PAYLOAD_PLACEHOLDER -->
+│   ├── giao_dien.css            ← 1 design system
+│   ├── dong_co.js            ← ★ toàn bộ logic render (2738 dòng)
+│   ├── phan_khuc.js          ← khai báo 6 phân khúc — ⚠️ HIỆN CHƯA ĐƯỢC ENGINE DÙNG (xem §8)
 │   └── vendor/
 │       └── plotly-basic.min.js  ← ~1 MB (bar/pie/scatter)
 │
 ├── database/
-│   └── cache_sales.parquet  ← TRUNG GIAN (~110 MB). Không commit. Xoá cũng được — build sau tự dựng lại.
+│   └── cache_ban_hang.parquet  ← TRUNG GIAN (~110 MB). Không commit. Xoá cũng được — build sau tự dựng lại.
 │
 └── dist/
     └── BaoCao_TongHop.html  ← ★ FILE DUY NHẤT UPLOAD LÊN DRIVE
 ```
 
-**File cần chạy code:** chỉ `backend/Update_Baocao_TongHop.py`. Nó tự import và gọi 5 module trong `backend/stages/` + `backend/render.py`. Không chạy các file stage lẻ trực tiếp (chúng có `if __name__ == '__main__'` chỉ để test nhanh).
+**File cần chạy code:** chỉ `xu_ly/cap_nhat_bao_cao.py`. Nó tự import và gọi 5 module trong `xu_ly/cac_buoc/` + `xu_ly/xuat_html.py`. Không chạy các file stage lẻ trực tiếp (chúng có `if __name__ == '__main__'` chỉ để test nhanh).
 
-**Đã xoá (rác):** `backend/__pycache__/`, `backend/stages/__pycache__/`, `build.log`, và trước đó: `frontend/` (bản FastAPI/standalone cũ), `backend/build_cache.py`, `backend/build_data.py`, `backend/data_full.db`.
+**Đã xoá (rác):** `xu_ly/__pycache__/`, `xu_ly/cac_buoc/__pycache__/`, `build.log`, và trước đó: `frontend/` (bản FastAPI/standalone cũ), `xu_ly/build_cache.py`, `xu_ly/build_data.py`, `xu_ly/data_full.db`.
 
 ---
 
@@ -72,30 +72,30 @@ BaoCao_TongHop/
 
 | Nguồn | Đường dẫn | Dùng cho |
 |:---|:---|:---|
-| System_sales | `D:\00.Data_AnPhuoc_Group\03.Data_Parquest\01.System_sales\<năm>\*.parquet` | số bán lẻ |
+| System_sales | `D:\AnPhuocGroup\AnPhuoc_Data\00.Data_AnPhuoc_Group\03.Data_Parquest\01.System_sales\<năm>\*.parquet` | số bán lẻ |
 | Contract_sales | `…\02.Contract_sales\<năm>\*.parquet` | số bán hợp đồng |
 | InventorySize | `…\03.Inventory\InventorySize.parquet` | số tồn (ảnh chụp) |
 | F_DataTracking | `…\02.Master\F_DataTracking.parquet` | thuộc tính SKU (join theo `item_code + Operation`) |
 | A_Region | `…\02.Master\A_Region.parquet` | Store_rank, FLD |
 | Lệnh HHLC | `…\07.Lenh_HHLC\<năm>\*.parquet` | cờ "vừa luân chuyển về" |
 
-`refresh_cache.py` gộp System_sales + Contract_sales (N năm gần nhất, tính từ `MAX(Year)` = 3) và `LEFT JOIN` F_DataTracking + A_Region → `database/cache_sales.parquet`.
+`lam_moi_cache.py` gộp System_sales + Contract_sales (N năm gần nhất, tính từ `MAX(Year)` = 3) và `LEFT JOIN` F_DataTracking + A_Region → `du_lieu_tam/cache_ban_hang.parquet`.
 
-> **Đã kiểm toán join:** `F_DataTracking` là **1:1 tuyệt đối** trên `(item_code, Operation)`; `A_Region` 1:1 trên `Store_name`. `cache_sales.parquet` có `SUM(Qty_Ban)` = nguồn thô y hệt (lệch 0). Không có double-count.
+> **Đã kiểm toán join:** `F_DataTracking` là **1:1 tuyệt đối** trên `(item_code, Operation)`; `A_Region` 1:1 trên `Store_name`. `cache_ban_hang.parquet` có `SUM(Qty_Ban)` = nguồn thô y hệt (lệch 0). Không có double-count.
 
 ---
 
-## 3. Pipeline build — 5 stage (`backend/Update_Baocao_TongHop.py`)
+## 3. Pipeline build — 5 stage (`xu_ly/cap_nhat_bao_cao.py`)
 
 Nhãn `[STAGE n]` in ra là **số hiệu module**, không phải thứ tự chạy. Thứ tự chạy thực tế:
 
 | # | Module | Input | Output (biến trong bộ nhớ) | Logic chính |
 |:--|:---|:---|:---|:---|
-| 1 | `refresh_cache.run(force)` | parquet gốc | `database/cache_sales.parquet` | Đọc 3 năm gần nhất. **Tự phát hiện:** so `MAX(Year*100+Month)` + tổng số dòng nguồn ↔ cache; nguồn mới hơn / khác → tự nạp lại, bằng nhau → bỏ qua. `--force-cache` = ép nạp lại. |
+| 1 | `refresh_cache.run(force)` | parquet gốc | `du_lieu_tam/cache_ban_hang.parquet` | Đọc 3 năm gần nhất. **Tự phát hiện:** so `MAX(Year*100+Month)` + tổng số dòng nguồn ↔ cache; nguồn mới hơn / khác → tự nạp lại, bằng nhau → bỏ qua. `--force-cache` = ép nạp lại. |
 | 2 | `aggregate_ban.run()` | cache_sales | `ban_payload`, `shared_dict`, `ref_year`, `ref_month` | Xác định kỳ tham chiếu = (Year, Month) mới nhất. Tổng hợp overview + top-N. |
 | 3 | `aggregate_ton.run(shared_dict, ref_year, ref_month)` | InventorySize + F_DataTracking + HHLC + cache_sales | `ton_payload`, `shared_dict` | Phân loại vị trí, size_profile, tuổi PP, cờ bán; metadata SKU. |
 | 4 | `validate.run(ton_payload, ban_payload)` | payload + parquet nguồn | — (raise nếu lệch) | So `SUM(Qty)` payload ↔ nguồn. **Dừng build nếu lệch > 0.5%.** |
-| 5 | `render.run(...)` | payload + `shell/*` | `dist/BaoCao_TongHop.html` | `json → gzip(level 9) → base64` → chèn vào `template.html` qua 1 placeholder literal; nhúng thẳng CSS/plotly/segments/engine. |
+| 5 | `render.run(...)` | payload + `giao_dien/*` | `04_KetQua/BaoCao_TongHop/BaoCao_TongHop.html` | `json → gzip(level 9) → base64` → chèn vào `mau_bao_cao.html` qua 1 placeholder literal; nhúng thẳng CSS/plotly/segments/engine. |
 
 **`shared_dict`** = bảng chuỗi dùng chung (`{'list': [...], 'map': {...}}`). Mọi giá trị chuỗi trong payload được thay bằng **chỉ số** vào `shared_dict['list']` (dictionary encoding) → gzip nén rất tốt.
 
@@ -269,13 +269,13 @@ Kỳ hiện tại = tháng M / năm Y (theo ngày build). `diff = (Y-year)*12 + 
 Từ `cache_sales`: `sold_30` (bán tháng M), `sold_60` (bán từ M-1), `sold_90` (bán từ M-2), `not_sold_90` (không). *(Xấp xỉ theo tháng lịch, không phải cửa sổ lăn theo ngày.)*
 
 ### 5.9. "Kỳ xem" (Sheet 2/3/4 Số Bán)
-Control `[Lũy kế đến T{ref}] [Theo tháng ▾]`. Mặc định **Lũy kế** = cộng T1..T{ref_month} năm hiện tại. **Theo tháng** = đúng 1 tháng. Logic ở `engine.js`: object `PERIODS` + `setPeriodMode/setPeriodMonth/periodMonthsFor/periodLastMonth/periodLabelFor`. MoM = tháng cuối kỳ vs tháng liền trước; YoY = cùng cửa sổ năm trước.
+Control `[Lũy kế đến T{ref}] [Theo tháng ▾]`. Mặc định **Lũy kế** = cộng T1..T{ref_month} năm hiện tại. **Theo tháng** = đúng 1 tháng. Logic ở `dong_co.js`: object `PERIODS` + `setPeriodMode/setPeriodMonth/periodMonthsFor/periodLastMonth/periodLabelFor`. MoM = tháng cuối kỳ vs tháng liền trước; YoY = cùng cửa sổ năm trước.
 
 ---
 
 ## 6. FRONTEND — 2 Phần × 4 Sheet
 
-`template.html`: `#btn-part-ban` / `#btn-part-ton` → `#sec-{part}-sheet{1..4}`. `switchSheet()` ẩn/hiện section và gọi hàm render.
+`mau_bao_cao.html`: `#btn-part-ban` / `#btn-part-ton` → `#sec-{part}-sheet{1..4}`. `switchSheet()` ẩn/hiện section và gọi hàm render.
 
 ### PHẦN 1 — SỐ BÁN
 
@@ -295,7 +295,7 @@ Control `[Lũy kế đến T{ref}] [Theo tháng ▾]`. Mặc định **Lũy kế
 | 3. Tồn kho HTCH | `sec-ton-sheet3` | `renderTonSheet3`, `renderTon3Age`, `renderTon3SlowMoving` | `ton.data` (region/all) hoặc `STORE_DATA_MAP` + `product_meta` (per-store) | Lọc Khu vực → Cửa hàng (danh sách CH lọc theo khu vực qua `ban.ov`). 5 KPI. Cơ cấu 6 nấc tuổi tồn. Bảng 5 brand. **Top mã bán chậm tồn cao** — gộp `Brand · Tên hàng` (`N mã · N CH`) → bấm "Xem mã hàng" → chi tiết **SKU (MaHang · Op)** theo cặp + Cửa hàng + Kiến nghị. |
 | 4. Chi tiết Tồn & Gãy Size | `sec-ton-sheet4` | `renderTonSheet4`, `renderTon4SummaryTable`, `openSizeModal` | `STORE_DATA_MAP` + `product_meta` + `ton.data` (summary) | **Bước 1**: 6 nhóm hàng (`setTon4CatGroup`, có nút "Tất cả nhóm"). 8 bộ lọc (Khu vực/CH/Trạng thái/Brand/Nhóm BC/Tên hàng/Cảnh báo bán/Tuổi tồn) + ô tìm kiếm. Bảng tổng hợp Brand–Tên hàng (đồng bộ theo CH/Khu vực). Bảng SKU chi tiết **theo cặp MaHang · Op** (chỉ SKU còn tồn), có nút **🔍 Soi Size** → modal đối soát Bán/Tồn từng size + cảnh báo **đứt size** (bán > 0 nhưng tồn = 0). |
 
-### Helper quan trọng trong `engine.js`
+### Helper quan trọng trong `dong_co.js`
 | Hàm | Vai trò |
 |:---|:---|
 | `switchPart` / `switchSheet` | điều hướng 2 Phần × 4 Sheet |
@@ -305,7 +305,7 @@ Control `[Lũy kế đến T{ref}] [Theo tháng ▾]`. Mặc định **Lũy kế
 | `PERIODS`, `setPeriodMode`, `setPeriodMonth`, `periodMonthsFor`, `periodLastMonth`, `periodLabelFor` | "Kỳ xem" cho Sheet 2/3/4 |
 | `scanBanStorePeriod(k)` | quét `ban.ov` 1 lượt → chỉ số theo cửa hàng cho kỳ đang chọn (Sheet 2/3) |
 | `fmtNum`, `fmtPct`, `getBadgePct`, `metaPriceStr`, `emptyRow` | định dạng hiển thị |
-| `classify_cat_group` (Python, `aggregate_ton.py`) | phân 6 nhóm hàng — phải giữ khớp với CASE trong `aggregate_ban.attr_sql` |
+| `classify_cat_group` (Python, `tong_hop_ton.py`) | phân 6 nhóm hàng — phải giữ khớp với CASE trong `aggregate_ban.attr_sql` |
 
 ---
 
@@ -313,7 +313,7 @@ Control `[Lũy kế đến T{ref}] [Theo tháng ▾]`. Mặc định **Lũy kế
 
 1. Mở **Google Drive** trên web.
 2. Chuột phải file `BaoCao_TongHop.html` cũ → **Quản lý phiên bản** (Manage versions).
-3. **Tải phiên bản mới lên** → chọn `D:\01.Python_Projects\BaoCao_TongHop\dist\BaoCao_TongHop.html`.
+3. **Tải phiên bản mới lên** → chọn `D:\AnPhuocGroup\AnPhuoc_Data\01.Python_Projects\04_KetQua\BaoCao_TongHop\BaoCao_TongHop.html`.
 4. Link chia sẻ **không đổi**; người nhận tải lại là có số mới.
 
 Người xem: tải file về → double-click mở bằng trình duyệt → chờ 1–2 giây giải nén → dùng 100% offline.
@@ -324,12 +324,12 @@ Người xem: tải file về → double-click mở bằng trình duyệt → ch
 
 | # | Vấn đề | Ghi chú |
 |:--|:---|:---|
-| 1 | **`shell/segments.js` được nhúng nhưng KHÔNG dùng** (`SEGMENTS` = 0 tham chiếu trong engine). | ~2 KB JS chết mỗi build. Hoặc nối `applySegment()` theo `DESIGN.md §6`, hoặc bỏ dòng nhúng trong `render.py`. |
+| 1 | **`giao_dien/phan_khuc.js` được nhúng nhưng KHÔNG dùng** (`SEGMENTS` = 0 tham chiếu trong engine). | ~2 KB JS chết mỗi build. Hoặc nối `applySegment()` theo `THIET_KE.md §6`, hoặc bỏ dòng nhúng trong `xuat_html.py`. |
 | 2 | **Payload thừa (tính nhưng frontend chưa đọc):** `ban.active_stores`, `ban.return_analysis`, `ton.item_attributes`. | Giữ lại làm sẵn cho các sheet tương lai (TB/CH, Đổi trả, drill thuộc tính). Bỏ nếu cần giảm dung lượng. |
 | 3 | **File `dist` ~13 MB**, vượt mục tiêu "< 15 MB để tải nhanh" của DESIGN nhưng vẫn < 15. Chi phối: `store_product_sizes` (~1,97M dòng) + `attr_sales` (có chiều tháng) + `ban.ov`. | Nếu cần nhẹ hơn: giảm `store_product_sizes` (chỉ dòng cần đối soát size), hoặc bỏ chiều tháng của `attr_sales`. |
 | 4 | **`STORE_DATA_MAP` lẫn một số "kho" vào danh sách cửa hàng** (vd "Kho Chi nhánh Hà Nội", "Kho Tổng hợp (NG-S-TL)"). SQL `store_product_sizes` chỉ loại 9 tên kho cố định. | Chỉ ảnh hưởng Sheet 3/4 Tồn (dòng chi tiết). Mở rộng danh sách loại trừ hoặc lọc `Store_name NOT LIKE 'Kho %'`. |
-| 5 | **`DESIGN.md` đã lỗi thời** ở nhiều chỗ (mô tả 8 sheet khác tên, thanh phân khúc, cấu trúc `ov` 16 cột…). | Tài liệu này (`ARCHITECTURE.md`) là bản đúng. `OPERATIONS.md` vẫn dùng được. |
-| 6 | `cache_sales.parquet` ~110 MB nằm trong `database/`. | Là trung gian. Stage 1 tự dựng lại khi nguồn thay đổi hoặc khi file không tồn tại (~1–2 phút). Xoá tay cũng không sao. |
+| 5 | **`THIET_KE.md` đã lỗi thời** ở nhiều chỗ (mô tả 8 sheet khác tên, thanh phân khúc, cấu trúc `ov` 16 cột…). | Tài liệu này (`KIEN_TRUC.md`) là bản đúng. `HUONG_DAN.md` vẫn dùng được. |
+| 6 | `cache_ban_hang.parquet` ~110 MB nằm trong `database/`. | Là trung gian. Stage 1 tự dựng lại khi nguồn thay đổi hoặc khi file không tồn tại (~1–2 phút). Xoá tay cũng không sao. |
 
 ---
 
@@ -341,9 +341,9 @@ Người xem: tải file về → double-click mở bằng trình duyệt → ch
 - **Accordion:** Sheet 2 & Sheet 3 các bảng "Top 5 mã theo tên hàng" thu gọn, bấm mới xổ; Sheet 3 gộp thêm cấp Brand.
 - **Số Tồn:** thêm cột `catg` (6 nhóm hàng) + Bước 1 cho Sheet 4 Tồn; cây phân cấp Sheet 2 & Top bán chậm Sheet 3 sửa cấu trúc, cột Kỳ PP dùng `dist_plan_raw`; Sheet 4 chỉ lấy mã còn tồn; đồng bộ bảng tổng hợp theo cửa hàng.
 - **SKU = MaHang + Operation (Option B):** `product_meta` khoá `MaHang§Operation`, `store_product_sizes` gộp cột `sku`, `warehouse_skus` khoá theo SKU, `brand_counts.sku_count` = distinct (MaHang, Operation). Hiển thị "theo cặp": mọi Operation của 1 MaHang liền nhau rồi mới sang MaHang khác. Modal Soi Size drill đúng SKU.
-- **Đổi tên** `build.py` → `Update_Baocao_TongHop.py`.
-- **Tự phát hiện dữ liệu bán mới:** `refresh_cache` so kỳ + số dòng nguồn ↔ cache, tự nạp lại khi cần → không cần `--force-cache` khi thêm tháng.
-- **Bỏ HARDCODE năm ở frontend:** `engine.js` + `template.html` không còn `2024/2025/2026` cố định. Mọi năm/nhãn/dropdown/biểu đồ/bảng so sánh lấy từ `refYearsList()` = `[ref.year, ref.year-1, ref.year-2]`. Có năm 2027 → **chỉ cần thả parquet + chạy build**, không sửa code.
+- **Đổi tên** `build.py` → `cap_nhat_bao_cao.py`.
+- **Tự phát hiện dữ liệu bán mới:** `lam_moi_cache` so kỳ + số dòng nguồn ↔ cache, tự nạp lại khi cần → không cần `--force-cache` khi thêm tháng.
+- **Bỏ HARDCODE năm ở frontend:** `dong_co.js` + `mau_bao_cao.html` không còn `2024/2025/2026` cố định. Mọi năm/nhãn/dropdown/biểu đồ/bảng so sánh lấy từ `refYearsList()` = `[ref.year, ref.year-1, ref.year-2]`. Có năm 2027 → **chỉ cần thả parquet + chạy build**, không sửa code.
 
 ---
 *Đối chiếu dữ liệu: mỗi lần build, Stage 4 VALIDATE phải in `>>> VALIDATE OK` với lệch Bán & Tồn = 0.0000%.*
