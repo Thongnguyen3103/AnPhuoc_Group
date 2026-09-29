@@ -1,0 +1,15 @@
+# Bytecode / cache Python
+__pycache__/
+*.py[cod]
+
+# Trung gian — Stage 1 tự dựng lại khi cần
+database/cache_sales.parquet
+
+# File giao — 13 MB, nên upload Drive thay vì commit
+dist/BaoCao_TongHop.html
+
+# Log / tạm
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

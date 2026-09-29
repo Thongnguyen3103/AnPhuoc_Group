@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE / may ca nhan
+.vscode/
+.idea/
+.claude/
+
+# Luu tru, ket qua dung chung (khong dua vao git)
+99_LuuTru/
+04_KetQua/
+
+# Du lieu (khong phai code)
+*.parquet
+*.xlsx
+*.xls
+*.duckdb
+*.db
+*.csv
+*.lock
+Thumbs.db
+desktop.ini
+
+# Tai khoan / mat khau
+**/accounts.json
+**/tai_khoan.json
+
+# Du lieu chay cua tung project (log, debug, cache, trang thai)
+**/data/logs/
+**/data/debug/
+**/data/_tmp_download/
+**/du_lieu/
+**/du_lieu_tam/
+**/dist/
+**/output/
+**/database/
+
+# Trang thai lon / backup cu
+**/hieu_suat_ky_history.json
+**/lich_su_hieu_suat_ky.json
+**/_backup_old/

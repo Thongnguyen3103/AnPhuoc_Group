@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BÁO CÁO TỔNG HỢP — TỒN &amp; SỐ BÁN AN PHƯỚC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Đang nạp và giải nén dữ liệu...</div>
+    <div class="loading-sub">Báo cáo tổng hợp An Phước Group (Offline 100%)</div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-logo-text">
+          AN PHUOC GROUP
+          <span class="brand-tag">Analytics</span>
+        </div>
+        <div class="header-meta">
+          <span class="meta-badge" id="badge-ref-date">📅 Kỳ báo cáo: Đang tải...</span>
+          <span class="meta-badge" id="badge-build-time">🕒 Dữ liệu: Đang tải...</span>
+          <span class="meta-badge">⚡ Offline 100%</span>
+        </div>
+      </div>
+
+      <!-- LEVEL 1: 2 PHẦN CHÍNH -->
+      <nav class="part-nav">
+        <button class="part-btn active" id="btn-part-ban" onclick="switchPart('ban')">
+          🛒 PHẦN 1: SỐ BÁN
+        </button>
+        <button class="part-btn" id="btn-part-ton" onclick="switchPart('ton')">
+          📦 PHẦN 2: SỐ TỒN
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- LEVEL 2: 4 SHEETS CHO PHẦN 1 (SỐ BÁN) -->
+  <div class="sheet-nav-wrapper" id="sheet-nav-ban">
+    <div class="sheet-nav">
+      <button class="sheet-btn active" id="btn-ban-sheet1" onclick="switchSheet('ban', 'sheet1')">
+        📊 Sheet 1: Tổng quan HTCH &amp; Brand
+      </button>
+      <button class="sheet-btn" id="btn-ban-sheet2" onclick="switchSheet('ban', 'sheet2')">
+        ⭐ Sheet 2: Phân tích Bán chạy
+      </button>
+      <button class="sheet-btn" id="btn-ban-sheet3" onclick="switchSheet('ban', 'sheet3')">
+        🏪 Sheet 3: Cấp Cửa hàng &amp; Khu vực
+      </button>
+      <button class="sheet-btn" id="btn-ban-sheet4" onclick="switchSheet('ban', 'sheet4')">
+        🏷️ Sheet 4: Chi tiết Thuộc tính
+      </button>
+    </div>
+  </div>
+
+  <!-- LEVEL 2: 4 SHEETS CHO PHẦN 2 (SỐ TỒN) -->
+  <div class="sheet-nav-wrapper" id="sheet-nav-ton" style="display: none;">
+    <div class="sheet-nav">
+      <button class="sheet-btn active" id="btn-ton-sheet1" onclick="switchSheet('ton', 'sheet1')">
+        📦 Sheet 1: Tồn kho Tổng hợp
+      </button>
+      <button class="sheet-btn" id="btn-ton-sheet2" onclick="switchSheet('ton', 'sheet2')">
+        🏭 Sheet 2: Tồn Kho Tổng (5 kho)
+      </button>
+      <button class="sheet-btn" id="btn-ton-sheet3" onclick="switchSheet('ton', 'sheet3')">
+        🏪 Sheet 3: Tồn kho HTCH
+      </button>
+      <button class="sheet-btn" id="btn-ton-sheet4" onclick="switchSheet('ton', 'sheet4')">
+        🔍 Sheet 4: Chi tiết Tồn &amp; Gãy Size
+      </button>
+    </div>
+  </div>
+
+  <main class="app-container">
+
+    <!-- ============================================================= -->
+    <!-- PHẦN 1: SỐ BÁN                                                -->
+    <!-- ============================================================= -->
+
+    <!-- SHEET 1.1: TỔNG QUAN HTCH & BRAND -->
+    <section id="sec-ban-sheet1">
+      <!-- Bộ lọc thời gian -->
+      <div class="filter-wrapper">
+        <div class="filter-grid" style="align-items: center;">
+          <div class="filter-group">
+            <label>Năm báo cáo</label>
+            <select class="filter-select" id="ban1-f-year" onchange="renderBanSheet1()">
+              <!-- 3 năm gần nhất do engine.js điền động theo kỳ tham chiếu -->
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Tháng</label>
+            <select class="filter-select" id="ban1-f-month" onchange="renderBanSheet1()">
+              <!-- Điền từ JS -->
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Nguồn bán</label>
+            <select class="filter-select" id="ban1-f-src" onchange="renderBanSheet1()">
+              <option value="Lẻ" selected>Bán Lẻ (HTCH)</option>
+              <option value="all">Tất cả (gồm KM/Thanh lý)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Loại giá</label>
+            <select class="filter-select" id="ban1-f-price" onchange="renderBanSheet1()">
+              <option value="all" selected>Tất cả loại giá</option>
+              <option value="Nguyên giá">Nguyên giá</option>
+              <option value="Sale">Sale (Khuyến mãi)</option>
+              <option value="Thanh lý">Thanh lý</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="filter-btn-reset" onclick="resetBanSheet1Filters()">↺ Mặc định</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI ROW 1: TỔNG BÁN LẺ ALL BRAND -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Tổng Bán Lẻ Tháng này</div>
+          <div class="kpi-val" id="ban1-kpi-cur-qty">0</div>
+          <div class="kpi-sub" id="ban1-kpi-cur-sub">Tất cả Brand</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Bán Tháng Trước (MoM)</div>
+          <div class="kpi-val" id="ban1-kpi-mom-rate">0</div>
+          <div class="kpi-sub" id="ban1-kpi-mom-diff">0%</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label" id="ban1-lbl-yoy25">Cùng kỳ năm trước</div>
+          <div class="kpi-val" id="ban1-kpi-yoy25-rate">0</div>
+          <div class="kpi-sub" id="ban1-kpi-yoy25-diff">0%</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label" id="ban1-lbl-yoy24">Cùng kỳ 2 năm trước</div>
+          <div class="kpi-val" id="ban1-kpi-yoy24-rate">0</div>
+          <div class="kpi-sub" id="ban1-kpi-yoy24-diff">0%</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-label">Lũy kế YTD Bán lẻ</div>
+          <div class="kpi-val" id="ban1-kpi-ytd-qty">0</div>
+          <div class="kpi-sub" id="ban1-kpi-ytd-yoy">YoY: 0%</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">SL Bán Hợp đồng (HĐ)</div>
+          <div class="kpi-val" id="ban1-kpi-hd-qty">0</div>
+          <div class="kpi-sub">Kênh bán sỉ / đối tác</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">SL Đổi Trả (Return)</div>
+          <div class="kpi-val" id="ban1-kpi-ret-qty">0</div>
+          <div class="kpi-sub">Sản phẩm phát sinh đổi</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Tỷ lệ Đổi trả / Bán</div>
+          <div class="kpi-val" id="ban1-kpi-ret-rate">0%</div>
+          <div class="kpi-sub">Chỉ số kiểm soát chất lượng</div>
+        </div>
+      </div>
+
+      <!-- BẢNG BÁN LẺ 5 BRAND CHÍNH -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Bán lẻ Chi tiết theo từng Thương hiệu (5 Brand chính)</span>
+            <span class="view-subtitle">An Phước · An Phước Ladies · Pierre Cardin · Anamai · Bonjour</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive">
+            <table class="data-table" id="ban1-table-brands">
+              <thead>
+                <tr>
+                  <th>Thương hiệu</th>
+                  <th>Tháng này (sp)</th>
+                  <th>Tháng trước</th>
+                  <th>MoM (%)</th>
+                  <th>Cùng kỳ '25</th>
+                  <th>YoY '25 (%)</th>
+                  <th>Cùng kỳ '24</th>
+                  <th>YoY '24 (%)</th>
+                  <th>Lũy kế YTD</th>
+                  <th>Tỉ trọng (%)</th>
+                  <th>Đổi trả (sp)</th>
+                  <th>Tỷ lệ đổi (%)</th>
+                </tr>
+              </thead>
+              <tbody id="ban1-table-brands-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BIỂU ĐỒ TĂNG TRƯỞNG 3 NĂM & MA TRẬN KHU VỰC X BRAND -->
+      <div class="grid-2col">
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Biểu đồ Tăng trưởng Doanh số Bán lẻ 3 năm gần nhất</span>
+              <span class="view-subtitle">Diễn biến sản lượng bán theo 12 tháng</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ban1-chart-trend" style="height: 320px;"></div>
+          </div>
+        </div>
+
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Ma trận Số bán: Khu vực × Thương hiệu</span>
+              <span class="view-subtitle">5 Brand chính × 5 Khu vực HTCH</span>
+            </div>
+            <div class="view-actions">
+              <div class="btn-toggle-group">
+                <button class="btn-toggle-item active" id="ban1-matrix-mode-qty" onclick="setBan1MatrixMode('qty')">Tổng Qty bán</button>
+                <button class="btn-toggle-item" id="ban1-matrix-mode-avg" onclick="setBan1MatrixMode('avg')">TB / Cửa hàng</button>
+              </div>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive">
+              <table class="data-table" id="ban1-table-matrix">
+                <thead>
+                  <tr>
+                    <th>Thương hiệu</th>
+                    <th>TP. HCM</th>
+                    <th>Miền Tây</th>
+                    <th>Miền Đông</th>
+                    <th>Miền Trung - TN</th>
+                    <th>Hà Nội</th>
+                    <th>Tổng 5 KV</th>
+                    <th>Toàn HT (gồm Event)</th>
+                  </tr>
+                </thead>
+                <tbody id="ban1-table-matrix-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 1.2: PHÂN TÍCH BÁN CHẠY -->
+    <section id="sec-ban-sheet2" hidden>
+      <div class="filter-wrapper">
+        <div class="filter-grid" style="align-items: center;">
+          <div class="filter-group">
+            <label>Kỳ xem</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <div class="btn-toggle-group">
+                <button class="btn-toggle-item active" id="ban2-period-ytd" onclick="setPeriodMode('ban2','ytd')">Lũy kế</button>
+                <button class="btn-toggle-item" id="ban2-period-month" onclick="setPeriodMode('ban2','month')">Theo tháng</button>
+              </div>
+              <select class="filter-select" id="ban2-period-month-sel" onchange="setPeriodMonth('ban2')" disabled style="max-width:130px;"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 20 Cửa hàng Bán nhiều nhất & ít nhất Nguyên giá -->
+      <div class="grid-2col">
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">⭐ Top 20 Cửa hàng Bán nhiều nhất (Hàng Nguyên giá)</span>
+              <span class="view-subtitle">Cửa hàng dẫn đầu doanh số nguyên giá năm hiện tại</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive" style="max-height: 480px;">
+              <table class="data-table" id="ban2-table-top20">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Cửa hàng</th>
+                    <th>Khu vực</th>
+                    <th>Số bán Nguyên giá</th>
+                    <th>MoM (%)</th>
+                    <th>YoY (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ban2-table-top20-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">⚠️ Top 20 Cửa hàng Bán ít nhất (Hàng Nguyên giá)</span>
+              <span class="view-subtitle">Các điểm bán cần đẩy mạnh giải pháp kích cầu</span>
+            </div>
+            <div class="view-actions">
+              <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="ban2-toggle-closed" onchange="renderBanSheet2TopStores()">
+                Gồm CH đóng cửa (=0)
+              </label>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive" style="max-height: 480px;">
+              <table class="data-table" id="ban2-table-bot20">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Cửa hàng</th>
+                    <th>Khu vực</th>
+                    <th>Số bán Nguyên giá</th>
+                    <th>MoM (%)</th>
+                    <th>YoY (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ban2-table-bot20-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 5 Cửa hàng theo từng Khu vực cho từng Brand -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Top 5 Cửa hàng Bán tốt nhất Nguyên giá theo từng Khu vực cho từng Brand</span>
+            <span class="view-subtitle">Chọn Brand để xem top 5 CH dẫn đầu tại từng vùng: TP. HCM, Miền Tây, Miền Đông, Miền Trung - TN, Hà Nội</span>
+          </div>
+          <div class="view-actions">
+            <select class="filter-select" id="ban2-select-brand" onchange="renderBanSheet2TopStoresByRegion()" style="font-weight: bold; min-width: 200px;">
+              <option value="Hiệu An Phước">Brand: Hiệu An Phước</option>
+              <option value="Hiệu Pierre Cardin">Brand: Hiệu Pierre Cardin</option>
+              <option value="Hiệu An Phước Ladies">Brand: Hiệu An Phước Ladies</option>
+              <option value="Hiệu Bonjour">Brand: Hiệu Bonjour</option>
+              <option value="Hiệu Anamai">Brand: Hiệu Anamai</option>
+            </select>
+          </div>
+        </div>
+        <div class="view-body">
+          <div id="ban2-top5-region-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
+        </div>
+      </div>
+
+      <!-- Top 5 Mã hàng Bán nguyên giá cho từng Brand theo từng Tên hàng -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Top 5 Mã hàng Bán chạy Nguyên giá cho từng Brand theo từng Tên hàng</span>
+            <span class="view-subtitle">Đánh giá sản phẩm chủ lực sinh lợi nhuận cao nhất của từng loại sản phẩm</span>
+          </div>
+          <div class="view-actions" style="display: flex; gap: 8px;">
+            <select class="filter-select" id="ban2-skus-brand" onchange="renderBanSheet2TopSkusByItem()" style="font-weight: bold;">
+              <option value="Hiệu An Phước">Brand: Hiệu An Phước</option>
+              <option value="Hiệu Pierre Cardin">Brand: Hiệu Pierre Cardin</option>
+              <option value="Hiệu An Phước Ladies">Brand: Hiệu An Phước Ladies</option>
+              <option value="Hiệu Bonjour">Brand: Hiệu Bonjour</option>
+              <option value="Hiệu Anamai">Brand: Hiệu Anamai</option>
+            </select>
+            <input type="text" class="filter-input" id="ban2-skus-search" placeholder="Tìm tên hàng / mã hàng..." oninput="renderBanSheet2TopSkusByItem()">
+          </div>
+        </div>
+        <div class="view-body">
+          <div id="ban2-top5-skus-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 1.3: CẤP CỬA HÀNG & KHU VỰC -->
+    <section id="sec-ban-sheet3" hidden>
+      <div class="filter-wrapper" style="border-top: 4px solid var(--primary);">
+        <div class="filter-grid" style="align-items: center;">
+          <div class="filter-group">
+            <label>Khu vực</label>
+            <select class="filter-select" id="ban3-f-region" onchange="onBan3RegionChange()">
+              <option value="all">Tất cả Khu vực</option>
+              <option value="TP. HCM">TP. HCM</option>
+              <option value="Miền Tây">Miền Tây</option>
+              <option value="Miền Đông">Miền Đông</option>
+              <option value="Miền Trung - TN">Miền Trung - TN</option>
+              <option value="Hà Nội">Hà Nội</option>
+              <option value="Event">Event</option>
+            </select>
+          </div>
+          <div class="filter-group" style="flex: 2;">
+            <label>Cửa hàng cụ thể</label>
+            <select class="filter-select" id="ban3-f-store" onchange="renderBanSheet3()" style="font-weight: bold; min-width: 260px;">
+              <option value="all">Toàn khu vực (Tất cả CH)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Kỳ xem</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <div class="btn-toggle-group">
+                <button class="btn-toggle-item active" id="ban3-period-ytd" onclick="setPeriodMode('ban3','ytd')">Lũy kế</button>
+                <button class="btn-toggle-item" id="ban3-period-month" onclick="setPeriodMode('ban3','month')">Theo tháng</button>
+              </div>
+              <select class="filter-select" id="ban3-period-month-sel" onchange="setPeriodMonth('ban3')" disabled style="max-width:130px;"></select>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="filter-btn-reset" onclick="resetBanSheet3Filters()">↺ Mặc định</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI ROW 3: ĐẦY ĐỦ CÁC THẺ THEO LOẠI BÁN & XẾP HẠNG -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Tổng Số Bán (theo Kỳ xem)</div>
+          <div class="kpi-val" id="ban3-kpi-sales">0</div>
+          <div class="kpi-sub" id="ban3-kpi-sales-sub">Sản phẩm bán ra</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Bán Nguyên Giá</div>
+          <div class="kpi-val" id="ban3-kpi-fp">0</div>
+          <div class="kpi-sub" id="ban3-kpi-fp-rate">0% tổng bán</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Bán Sale (Khuyến mãi)</div>
+          <div class="kpi-val" id="ban3-kpi-sale">0</div>
+          <div class="kpi-sub" id="ban3-kpi-sale-rate">0% tổng bán</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Bán Thanh Lý</div>
+          <div class="kpi-val" id="ban3-kpi-tl">0</div>
+          <div class="kpi-sub" id="ban3-kpi-tl-rate">0% tổng bán</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Bán Hợp Đồng (HĐ)</div>
+          <div class="kpi-val" id="ban3-kpi-hd">0</div>
+          <div class="kpi-sub" id="ban3-kpi-hd-rate">0% tổng bán</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Đổi Trả (Return)</div>
+          <div class="kpi-val" id="ban3-kpi-ret">0</div>
+          <div class="kpi-sub" id="ban3-kpi-ret-rate">Tỷ lệ: 0%</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Thứ Hạng Trong Khu Vực</div>
+          <div class="kpi-val" id="ban3-kpi-rank-region">#0</div>
+          <div class="kpi-sub" id="ban3-kpi-rank-region-sub">trên tổng số CH khu vực</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-label">Thứ Hạng Toàn HTCH</div>
+          <div class="kpi-val" id="ban3-kpi-rank-sys">#0</div>
+          <div class="kpi-sub" id="ban3-kpi-rank-sys-sub">trên 212 CH (bỏ Event)</div>
+        </div>
+      </div>
+
+      <div class="grid-2col">
+        <!-- Bán lẻ 5 brand tại điểm bán -->
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Số Bán Chi tiết theo 5 Brand Chính</span>
+              <span class="view-subtitle">Tại điểm bán / khu vực đang chọn</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive">
+              <table class="data-table" id="ban3-table-brands">
+                <thead>
+                  <tr>
+                    <th>Thương hiệu</th>
+                    <th>Số bán (sp)</th>
+                    <th>Tỷ trọng (%)</th>
+                    <th>MoM (%)</th>
+                    <th>YoY (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ban3-table-brands-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Biểu đồ 3 năm tại điểm bán -->
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Xu hướng Tăng trưởng 3 năm gần nhất</span>
+              <span class="view-subtitle">Diễn biến số bán theo từng tháng</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ban3-chart-trend" style="height: 280px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 5 Mã bán chạy nguyên giá theo tên hàng tại Cửa hàng -->
+      <div class="view-card" style="border-left: 4px solid var(--accent);">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Top 5 Mã Bán chạy Nguyên giá theo từng Tên hàng tại Cửa hàng</span>
+            <span class="view-subtitle">Sản phẩm cốt lõi mang lại doanh thu tại điểm bán</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div id="ban3-top-skus-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 1.4: CHI TIẾT THUỘC TÍNH THEO 6 NHÓM HÀNG -->
+    <section id="sec-ban-sheet4" hidden>
+      <!-- BƯỚC 1: Chọn Nhóm hàng -->
+      <div class="seg-wrapper" style="border-top: 4px solid var(--accent);">
+        <div class="seg-left">
+          <span class="seg-title">Bước 1: Chọn Nhóm hàng:</span>
+          <div class="seg-list" id="ban4-cat-group-list">
+            <button class="seg-btn active" onclick="setBan4CatGroup('Nhóm chủ đạo')">Nhóm chủ đạo</button>
+            <button class="seg-btn" onclick="setBan4CatGroup('Nhóm Golf')">Nhóm Golf</button>
+            <button class="seg-btn" onclick="setBan4CatGroup('Nhóm Đồ da')">Nhóm Đồ da</button>
+            <button class="seg-btn" onclick="setBan4CatGroup('Nhóm Phụ kiện khác')">Nhóm Phụ kiện khác</button>
+            <button class="seg-btn" onclick="setBan4CatGroup('Nhóm Quần áo khác')">Nhóm Quần áo khác</button>
+            <button class="seg-btn" onclick="setBan4CatGroup('Nhóm Anamai / Bonjour')">Nhóm Anamai / Bonjour</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BƯỚC 2..5: Cascading Filters -->
+      <div class="filter-wrapper">
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Bước 2: Khu vực</label>
+            <select class="filter-select" id="ban4-f-region" onchange="renderBanSheet4()">
+              <option value="all">Toàn hệ thống</option>
+              <option value="TP. HCM">TP. HCM</option>
+              <option value="Miền Tây">Miền Tây</option>
+              <option value="Miền Đông">Miền Đông</option>
+              <option value="Miền Trung - TN">Miền Trung - TN</option>
+              <option value="Hà Nội">Hà Nội</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Bước 3: Thương hiệu (Brand)</label>
+            <select class="filter-select" id="ban4-f-brand" onchange="onBan4BrandChange()">
+              <option value="all">Tất cả Brand</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Bước 4: Nhóm BC (Group Report)</label>
+            <select class="filter-select" id="ban4-f-group" onchange="onBan4GroupChange()">
+              <option value="all">Tất cả Nhóm</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Bước 5: Tên hàng (Item Name)</label>
+            <select class="filter-select" id="ban4-f-item" onchange="renderBanSheet4()">
+              <option value="all">Tất cả Tên hàng</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Kỳ xem (áp cho cả 3 cột năm)</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <div class="btn-toggle-group">
+                <button class="btn-toggle-item active" id="ban4-period-ytd" onclick="setPeriodMode('ban4','ytd')">Lũy kế</button>
+                <button class="btn-toggle-item" id="ban4-period-month" onclick="setPeriodMode('ban4','month')">Theo tháng</button>
+              </div>
+              <select class="filter-select" id="ban4-period-month-sel" onchange="setPeriodMonth('ban4')" disabled style="max-width:120px;"></select>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="filter-btn-reset" onclick="resetBanSheet4Filters()">↺ Xóa lọc</button>
+          </div>
+        </div>
+
+        <!-- BƯỚC 6: Chọn thuộc tính soi -->
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-weight: 700; color: var(--primary);">Bước 6: Chọn Thuộc tính soi:</span>
+          <button class="sheet-btn active" id="ban4-btn-view-all" onclick="setBan4AttrView('all')">📊 Tất cả Thuộc tính</button>
+          <button class="sheet-btn" id="ban4-btn-view-form" onclick="setBan4AttrView('form')">✂️ Form dáng</button>
+          <button class="sheet-btn" id="ban4-btn-view-style" onclick="setBan4AttrView('style')">👔 Kiểu dáng / Style</button>
+          <button class="sheet-btn" id="ban4-btn-view-color" onclick="setBan4AttrView('color')">🎨 Nhóm màu sắc</button>
+        </div>
+      </div>
+
+      <!-- 3 Bảng / Biểu đồ Phân tích Thuộc tính so sánh qua các năm -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
+        <div class="view-card" id="ban4-card-form">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Form Dáng Bán chạy (So sánh qua các năm)</span>
+              <span class="view-subtitle">Slimfit · Regular · Classic...</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ban4-chart-form" style="height: 220px; margin-bottom: 12px;"></div>
+            <div class="table-responsive">
+              <table class="data-table" id="ban4-table-form">
+                <thead>
+                  <tr>
+                    <th>Form dáng</th>
+                    <th>Năm nay</th>
+                    <th>Năm -1</th>
+                    <th>Năm -2</th>
+                    <th>Tăng trưởng YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="ban4-table-form-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-card" id="ban4-card-style">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Kiểu Dáng / Chi Tiết (Style)</span>
+              <span class="view-subtitle">Cổ, Tay, Túi, Khóa kéo...</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ban4-chart-style" style="height: 220px; margin-bottom: 12px;"></div>
+            <div class="table-responsive">
+              <table class="data-table" id="ban4-table-style">
+                <thead>
+                  <tr>
+                    <th>Kiểu / Style</th>
+                    <th>Năm nay</th>
+                    <th>Năm -1</th>
+                    <th>Năm -2</th>
+                    <th>Tăng trưởng YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="ban4-table-style-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-card" id="ban4-card-color">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Nhóm Màu Sắc Bán chạy</span>
+              <span class="view-subtitle">Trắng · Xanh · Đen · Xám...</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ban4-chart-color" style="height: 220px; margin-bottom: 12px;"></div>
+            <div class="table-responsive">
+              <table class="data-table" id="ban4-table-color">
+                <thead>
+                  <tr>
+                    <th>Nhóm màu</th>
+                    <th>Năm nay</th>
+                    <th>Năm -1</th>
+                    <th>Năm -2</th>
+                    <th>Tăng trưởng YoY</th>
+                  </tr>
+                </thead>
+                <tbody id="ban4-table-color-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- ============================================================= -->
+    <!-- PHẦN 2: SỐ TỒN                                                -->
+    <!-- ============================================================= -->
+
+    <!-- SHEET 2.1: TỒN KHO TỔNG HỢP -->
+    <section id="sec-ton-sheet1" hidden>
+      <!-- KPIs TỔNG TỒN PHÂN LOẠI TRẠNG THÁI -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Tổng Tồn Kho Toàn Hệ Thống</div>
+          <div class="kpi-val" id="ton1-kpi-total">0</div>
+          <div class="kpi-sub">Sản phẩm (CH &amp; Kho)</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Tồn Hàng Nguyên Giá</div>
+          <div class="kpi-val" id="ton1-kpi-fp">0</div>
+          <div class="kpi-sub" id="ton1-kpi-fp-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Tồn Hàng Sale (Khuyến mãi)</div>
+          <div class="kpi-val" id="ton1-kpi-sale">0</div>
+          <div class="kpi-sub" id="ton1-kpi-sale-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Tồn Hàng Thanh Lý</div>
+          <div class="kpi-val" id="ton1-kpi-tl">0</div>
+          <div class="kpi-sub" id="ton1-kpi-tl-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Tồn tại Cửa hàng</div>
+          <div class="kpi-val" id="ton1-kpi-ch">0</div>
+          <div class="kpi-sub" id="ton1-kpi-ch-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tồn tại Kho Tổng</div>
+          <div class="kpi-val" id="ton1-kpi-kho">0</div>
+          <div class="kpi-sub" id="ton1-kpi-kho-rate">0% tổng tồn</div>
+        </div>
+      </div>
+
+      <!-- TỒN 5 BRAND THEO 3 TRẠNG THÁI -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Tồn kho theo 5 Thương hiệu Chính &amp; 3 Trạng thái Giá</span>
+            <span class="view-subtitle">Phân bổ tỷ trọng Nguyên giá, Sale và Thanh lý theo từng Brand</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive">
+            <table class="data-table" id="ton1-table-brands">
+              <thead>
+                <tr>
+                  <th>Thương hiệu</th>
+                  <th>Nguyên giá (sp)</th>
+                  <th>Sale (sp)</th>
+                  <th>Thanh lý (sp)</th>
+                  <th>Tổng tồn (sp)</th>
+                  <th>Tỉ trọng (%)</th>
+                  <th>Số Tên hàng</th>
+                  <th>Số Mã hàng (SKU)</th>
+                </tr>
+              </thead>
+              <tbody id="ton1-table-brands-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TỒN THEO KHU VỰC & KHO TỔNG (CLICK BUNG CHI TIẾT 5 KHO) -->
+      <div class="grid-2col">
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Tồn kho theo Vị trí: Khu vực CH &amp; Kho Tổng</span>
+              <span class="view-subtitle">Bấm vào dòng <strong>"📦 KHO TỔNG"</strong> để bung xem chi tiết 5 kho</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive">
+              <table class="data-table" id="ton1-table-locations">
+                <thead>
+                  <tr>
+                    <th>Vị trí / Đơn vị</th>
+                    <th>Nguyên giá</th>
+                    <th>Sale</th>
+                    <th>Thanh lý</th>
+                    <th>Tổng tồn</th>
+                    <th>Tỉ trọng (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ton1-table-locations-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Ma trận Tồn: Khu vực × Thương hiệu</span>
+              <span class="view-subtitle">Xem phân bổ tồn theo trạng thái giá</span>
+            </div>
+            <div class="view-actions">
+              <select class="filter-select" id="ton1-matrix-status" onchange="renderTon1Matrix()" style="font-weight: bold;">
+                <option value="all">Tất cả trạng thái giá</option>
+                <option value="Nguyên giá" selected>Nguyên giá</option>
+                <option value="Sale">Sale (Khuyến mãi)</option>
+                <option value="Thanh lý">Thanh lý</option>
+              </select>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive">
+              <table class="data-table" id="ton1-table-matrix">
+                <thead>
+                  <tr>
+                    <th>Thương hiệu</th>
+                    <th>TP. HCM</th>
+                    <th>Miền Tây</th>
+                    <th>Miền Đông</th>
+                    <th>Miền Trung - TN</th>
+                    <th>Hà Nội</th>
+                    <th>Kho Tổng</th>
+                    <th>Tổng cộng</th>
+                  </tr>
+                </thead>
+                <tbody id="ton1-table-matrix-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 2.2: TỒN KHO TỔNG (5 KHO) -->
+    <section id="sec-ton-sheet2" hidden>
+      <!-- KPIs 5 KHO -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Tổng tồn 5 Kho Tổng</div>
+          <div class="kpi-val" id="ton2-kpi-total">0</div>
+          <div class="kpi-sub">Sản phẩm tại trung tâm</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Lượng hàng Chưa Phân Phối</div>
+          <div class="kpi-val" id="ton2-kpi-prep">0</div>
+          <div class="kpi-sub">KHPP tương lai / Chưa ra CH</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Hàng Mới Phân Phối (&lt; 6th)</div>
+          <div class="kpi-val" id="ton2-kpi-new">0</div>
+          <div class="kpi-sub">Đang lưu thông bổ sung</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Hàng Cũ (&gt; 6 tháng)</div>
+          <div class="kpi-val" id="ton2-kpi-old">0</div>
+          <div class="kpi-sub">Tồn kho trung tâm lâu ngày</div>
+        </div>
+      </div>
+
+      <!-- CARDS CHI TIẾT 5 KHO TỔNG -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Tổng hợp Tồn kho theo 5 Kho Trung Tâm</span>
+            <span class="view-subtitle">Kho AP · Kho PIE · Kho TB3 đồ lót · Kho CNHN · Kho Tổng Hợp</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div id="ton2-central-warehouses-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;"></div>
+        </div>
+      </div>
+
+      <!-- BẢNG PHÂN CẤP ĐA TẦNG & SIZE THEO TÊN HÀNG / MÃ HÀNG -->
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Cây Phân Cấp &amp; Dãy Size Tồn Kho Tổng</span>
+            <span class="view-subtitle">Brand → Group Report → Tên hàng → Form/Style/Color → Size Matrix</span>
+          </div>
+          <div class="view-actions" style="display: flex; gap: 8px;">
+            <select class="filter-select" id="ton2-f-wh" onchange="renderTonSheet2Hierarchy()" style="font-weight: bold;">
+              <option value="all">Tất cả 5 Kho Tổng</option>
+              <option value="Kho AP">Kho AP</option>
+              <option value="Kho PIE">Kho PIE</option>
+              <option value="Kho TB3 đồ lót">Kho TB3 đồ lót</option>
+              <option value="Kho CNHN">Kho CNHN</option>
+              <option value="Kho Tổng hợp">Kho Tổng hợp</option>
+            </select>
+            <input type="text" class="filter-input" id="ton2-search" placeholder="Tìm tên hàng / mã hàng..." oninput="renderTonSheet2Hierarchy()">
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive">
+            <table class="data-table" id="ton2-table-hierarchy">
+              <thead>
+                <tr>
+                  <th>Tên hàng</th>
+                  <th>Nhóm BC</th>
+                  <th>Brand</th>
+                  <th>Số mã hàng</th>
+                  <th>Tổng tồn</th>
+                  <th>Dãy Size tổng</th>
+                </tr>
+              </thead>
+              <tbody id="ton2-table-hierarchy-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 2.3: TỒN KHO HTCH -->
+    <section id="sec-ton-sheet3" hidden>
+      <div class="filter-wrapper" style="border-top: 4px solid var(--primary);">
+        <div class="filter-grid" style="align-items: center;">
+          <div class="filter-group">
+            <label>Khu vực</label>
+            <select class="filter-select" id="ton3-f-region" onchange="onTon3RegionChange()">
+              <option value="all">Tất cả Khu vực</option>
+              <option value="TP. HCM">TP. HCM</option>
+              <option value="Miền Tây">Miền Tây</option>
+              <option value="Miền Đông">Miền Đông</option>
+              <option value="Miền Trung - TN">Miền Trung - TN</option>
+              <option value="Hà Nội">Hà Nội</option>
+              <option value="Event">Event</option>
+            </select>
+          </div>
+          <div class="filter-group" style="flex: 2;">
+            <label>Cửa hàng cụ thể</label>
+            <select class="filter-select" id="ton3-f-store" onchange="renderTonSheet3()" style="font-weight: bold; min-width: 260px;">
+              <option value="all">Toàn khu vực (Tất cả CH)</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="filter-btn-reset" onclick="resetTonSheet3Filters()">↺ Mặc định</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI ROW 3 TỒN -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Tổng Tồn Kho Cửa Hàng</div>
+          <div class="kpi-val" id="ton3-kpi-total">0</div>
+          <div class="kpi-sub">Sản phẩm trên kệ</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Hàng Nguyên Giá</div>
+          <div class="kpi-val" id="ton3-kpi-fp">0</div>
+          <div class="kpi-sub" id="ton3-kpi-fp-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Hàng Sale</div>
+          <div class="kpi-val" id="ton3-kpi-sale">0</div>
+          <div class="kpi-sub" id="ton3-kpi-sale-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Hàng Thanh Lý</div>
+          <div class="kpi-val" id="ton3-kpi-tl">0</div>
+          <div class="kpi-sub" id="ton3-kpi-tl-rate">0% tổng tồn</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Hàng Mới PP (&lt; 6 tháng)</div>
+          <div class="kpi-val" id="ton3-kpi-new">0</div>
+          <div class="kpi-sub" id="ton3-kpi-new-rate">0% tổng tồn</div>
+        </div>
+      </div>
+
+      <!-- TUỔI TỒN KHO THEO DIST_PLAN (6 NẤC) & TỒN 5 BRAND -->
+      <div class="grid-2col">
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Cơ cấu Tuổi Tồn Kho theo Kỳ Phân Phối (Dist_plan)</span>
+              <span class="view-subtitle">6 nấc tuổi: Chuẩn bị PP · Mới PP · 6th · 1 năm · 2 năm · &gt; 2 năm</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div id="ton3-chart-age" style="height: 240px; margin-bottom: 12px;"></div>
+            <div class="table-responsive">
+              <table class="data-table" id="ton3-table-age">
+                <thead>
+                  <tr>
+                    <th>Nấc tuổi tồn</th>
+                    <th>Số lượng (sp)</th>
+                    <th>Tỉ trọng (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ton3-table-age-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-card">
+          <div class="view-header">
+            <div class="view-title-group">
+              <span class="view-title">Tồn kho theo 5 Thương hiệu Chính</span>
+              <span class="view-subtitle">Tại điểm bán / khu vực đã chọn</span>
+            </div>
+          </div>
+          <div class="view-body">
+            <div class="table-responsive">
+              <table class="data-table" id="ton3-table-brands">
+                <thead>
+                  <tr>
+                    <th>Thương hiệu</th>
+                    <th>Nguyên giá</th>
+                    <th>Sale</th>
+                    <th>Thanh lý</th>
+                    <th>Tổng tồn</th>
+                    <th>Tỉ trọng (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="ton3-table-brands-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOP 10 MÃ BÁN CHẬM TỒN CAO NGUYÊN GIÁ KÈM KIẾN NGHỊ ĐIỀU CHUYỂN -->
+      <div class="view-card" style="border-left: 4px solid var(--danger);">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title" style="color: var(--danger);">⚠️ Top 10 Mã Hàng Bán Chậm Tồn Cao (Nguyên Giá) &amp; Kiến Nghị Điều Chuyển</span>
+            <span class="view-subtitle">Mã hàng ứ đọng nguyên giá cần ưu tiên giải phóng vốn &amp; luân chuyển sang CH bán tốt</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive">
+            <table class="data-table" id="ton3-table-slow">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Brand</th>
+                  <th>Tên hàng</th>
+                  <th>Số mã ứ đọng</th>
+                  <th>Tổng tồn NG</th>
+                  <th>Đã bán năm nay</th>
+                  <th style="text-align: center;">Chi tiết mã hàng</th>
+                </tr>
+              </thead>
+              <tbody id="ton3-table-slow-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SHEET 2.4: CHI TIẾT TỒN KHO & GÃY SIZE -->
+    <section id="sec-ton-sheet4" hidden>
+      <!-- BƯỚC 1: Chọn Nhóm hàng (giống Sheet 4 Số Bán) -->
+      <div class="seg-wrapper" style="border-top: 4px solid var(--accent);">
+        <div class="seg-left">
+          <span class="seg-title">Bước 1: Chọn Nhóm hàng:</span>
+          <div class="seg-list" id="ton4-cat-group-list">
+            <button class="seg-btn active" onclick="setTon4CatGroup('all')">Tất cả nhóm</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm chủ đạo')">Nhóm chủ đạo</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm Golf')">Nhóm Golf</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm Đồ da')">Nhóm Đồ da</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm Phụ kiện khác')">Nhóm Phụ kiện khác</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm Quần áo khác')">Nhóm Quần áo khác</button>
+            <button class="seg-btn" onclick="setTon4CatGroup('Nhóm Anamai / Bonjour')">Nhóm Anamai / Bonjour</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BỘ LỌC ĐA CẤP ĐẦY ĐỦ -->
+      <div class="filter-wrapper" style="border-top: 4px solid var(--primary);">
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Khu vực</label>
+            <select class="filter-select" id="ton4-f-region" onchange="onTon4RegionChange()">
+              <option value="all">Tất cả Khu vực</option>
+              <option value="TP. HCM">TP. HCM</option>
+              <option value="Miền Tây">Miền Tây</option>
+              <option value="Miền Đông">Miền Đông</option>
+              <option value="Miền Trung - TN">Miền Trung - TN</option>
+              <option value="Hà Nội">Hà Nội</option>
+              <option value="Event">Event</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Cửa hàng cụ thể</label>
+            <select class="filter-select" id="ton4-f-store" onchange="renderTonSheet4()" style="min-width: 200px;">
+              <option value="all">Tất cả Cửa hàng</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Trạng thái giá</label>
+            <select class="filter-select" id="ton4-f-status" onchange="renderTonSheet4()">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Nguyên giá">Nguyên giá</option>
+              <option value="Sale">Sale</option>
+              <option value="Thanh lý">Thanh lý</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Thương hiệu</label>
+            <select class="filter-select" id="ton4-f-brand" onchange="onTon4BrandChange()">
+              <option value="all">Tất cả Brand</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Nhóm BC</label>
+            <select class="filter-select" id="ton4-f-group" onchange="onTon4GroupChange()">
+              <option value="all">Tất cả Nhóm</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Tên hàng</label>
+            <select class="filter-select" id="ton4-f-item" onchange="renderTonSheet4()">
+              <option value="all">Tất cả Tên hàng</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Cảnh báo bán</label>
+            <select class="filter-select" id="ton4-f-sold" onchange="renderTonSheet4()">
+              <option value="all">Tất cả trạng thái bán</option>
+              <option value="sold_30">Bán ≤ 30 ngày</option>
+              <option value="sold_60">Bán 31-60 ngày</option>
+              <option value="sold_90">Bán 61-90 ngày</option>
+              <option value="not_sold_90">⚠️ Ứ đọng > 90 ngày</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Tuổi tồn (Dist_plan)</label>
+            <select class="filter-select" id="ton4-f-dist" onchange="renderTonSheet4()">
+              <option value="all">Tất cả tuổi tồn</option>
+              <option value="prep">Chuẩn bị PP</option>
+              <option value="new_dist">Mới PP (0-5th)</option>
+              <option value="pp_6m">PP 6 tháng</option>
+              <option value="pp_1y">PP 1 năm</option>
+              <option value="pp_2y">PP 2 năm</option>
+              <option value="pp_over_2y">PP > 2 năm</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;">
+          <input type="text" class="filter-input" id="ton4-search-sku" placeholder="Tìm nhanh Mã hàng / Tên sản phẩm / Màu sắc..." oninput="renderTonSheet4()" style="max-width: 450px;">
+          <button class="filter-btn-reset" onclick="resetTonSheet4Filters()">↺ Xóa toàn bộ lọc</button>
+          <span class="meta-badge" id="ton4-result-count" style="margin-left: auto;">0 sản phẩm</span>
+        </div>
+      </div>
+
+      <!-- BẢNG TỔNG HỢP BRAND - TÊN HÀNG KHI CHƯA LỌC SKU -->
+      <div class="view-card" id="ton4-summary-card">
+        <div class="view-header">
+          <div class="view-title-group">
+            <span class="view-title">Bảng Tổng Hợp Brand - Tên Hàng &amp; Dãy Size Tổng</span>
+            <span class="view-subtitle">Tổng quan kiểm soát cơ cấu sản phẩm trước khi soi chi tiết SKU</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive" style="max-height: 380px;">
+            <table class="data-table" id="ton4-table-summary">
+              <thead>
+                <tr>
+                  <th>Thương hiệu</th>
+                  <th>Nhóm BC</th>
+                  <th>Tên hàng</th>
+                  <th>Tổng tồn (sp)</th>
+                  <th>Dãy Size phân bổ</th>
+                </tr>
+              </thead>
+              <tbody id="ton4-table-summary-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG CHI TIẾT MÃ HÀNG (SKU DETAIL TABLE VỚI CỜ 30/60/90, HHLC VÀ DÒNG TOTAL) -->
+      <div class="view-card" style="border: 2px solid var(--primary);">
+        <div class="view-header" style="background: var(--primary); color: #ffffff;">
+          <div class="view-title-group">
+            <span class="view-title" style="color: #ffffff;">📋 BẢNG CHI TIẾT MÃ HÀNG (SKU) &amp; ĐỐI SOÁT SIZE</span>
+            <span class="view-subtitle" style="color: #cbd5e1;">(Bao gồm Cờ bán chậm 30/60/90d, Cờ Luân chuyển 4 tháng, Dòng Total cho từng Tên hàng và Nút [🔍 Soi Size])</span>
+          </div>
+        </div>
+        <div class="view-body">
+          <div class="table-responsive" style="max-height: 650px;">
+            <table class="data-table" id="ton4-table-skus">
+              <thead>
+                <tr>
+                  <th>Mã hàng</th>
+                  <th>Tên sản phẩm</th>
+                  <th>Nhóm</th>
+                  <th>Brand</th>
+                  <th>Form / Style</th>
+                  <th>Màu sắc</th>
+                  <th>Đơn giá</th>
+                  <th>Trạng thái</th>
+                  <th>Kỳ PP</th>
+                  <th>Cảnh báo bán</th>
+                  <th>Lệnh LC</th>
+                  <th>Số Tồn</th>
+                  <th>Số Bán</th>
+                  <th>Dãy Size phân bổ</th>
+                  <th style="text-align: center;">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="ton4-table-skus-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- MODAL ĐỐI SOÁT SIZE CHI TIẾT: BÁN SIZE NÀO & TỒN SIZE NÀO     -->
+  <!-- ============================================================= -->
+  <div id="size-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: #ffffff; width: 92%; max-width: 960px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="background: var(--primary); color: #ffffff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <strong id="size-modal-title" style="font-size: 15px;">ĐỐI SOÁT KÍCH CỠ (SIZE): BÁN SIZE NÀO &amp; TỒN SIZE NÀO</strong>
+        <button onclick="closeSizeModal()" style="background: transparent; border: none; color: #ffffff; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div style="padding: 20px; overflow-y: auto;">
+        <div id="size-modal-meta" style="margin-bottom: 14px; font-size: 13px; color: var(--text-muted); line-height: 1.6;"></div>
+        <div class="table-responsive">
+          <table class="data-table" id="size-modal-table">
+            <thead id="size-modal-thead"></thead>
+            <tbody id="size-modal-tbody"></tbody>
+          </table>
+        </div>
+        <div id="size-modal-alerts" style="margin-top: 14px;"></div>
+      </div>
+      <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border); text-align: right;">
+        <button class="filter-btn-reset" onclick="closeSizeModal()">Đóng bảng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYLOAD SẼ ĐƯỢC CHÈN VÀO ĐÂY QUA RENDER.PY -->
+  <script id="payload" type="application/octet-stream"><!-- PAYLOAD_PLACEHOLDER --></script>
+
+  <!-- VENDOR & ENGINE SCRIPTS (Khi render sẽ được nhúng thẳng) -->
+  <script src="vendor/plotly-basic.min.js"></script>
+  <script src="segments.js"></script>
+  <script src="engine.js"></script>
+
+</body>
+</html>

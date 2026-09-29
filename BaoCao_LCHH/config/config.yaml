@@ -1,0 +1,40 @@
+# ============================================================
+#  Cau hinh RIENG cua project BaoCao_LCHH
+# ============================================================
+# Duong dan NGUON DU LIEU GOC (Lenh_HHLC, History_LC, TraKho, Region,
+# Sales, Inventory) KHONG con khai bao o day nua -> lay tu file dung
+# chung toan workspace: 01.Python_Projects/common/data_sources.yaml
+# (xem class DataSources trong src/config.py).
+#
+# File nay chi con cau hinh RIENG cua bao cao LCHH.
+
+# Ky bao cao mac dinh (dinh dang YYYY-MM). Co the chon nhieu thang.
+# Uu tien tham so dong lenh -> vi du:
+#     python build_report.py 2026-08
+#     python build_report.py 2026-09
+#     python build_report.py 2026-08 2026-09 2026-10
+# Neu khong truyen tham so thi hoi tren man hinh, Enter -> lay 'periods' duoi day.
+# Ket qua luon ghi vao 1 file co dinh: output/KQ_LCHH.parquet (chua thang vua chon).
+periods:
+  - "2026-08"
+
+# --- build_performance.py ---
+# Tinh ban KE TU thang luan chuyen M. sales_months_ahead = so thang doc them sau M.
+# Vd M=8, =3 -> tinh ban thang 8, 9, 10, 11.
+#   Qty_Ban_30d = thang M | 60d = M..M+1 | 90d = M..M+2 | LuyKe = tat ca thang doc duoc
+sales_months_ahead: 3
+# Chi tinh dong ban co Noi_dung nam trong danh sach nay (bo Doi / Tang)
+sales_noi_dung: ["Bán"]
+
+# So ngay ke tu ngay ra thong bao (NgayChungTu) ma lenh phai duoc thuc hien.
+# Dung cho cot Danh_gia_han trong KQ_LCHH.parquet.
+han_thuc_hien_ngay: 15
+
+# Anh xa ten cua hang khong khop sau khi da chuan hoa hoa thuong.
+# key = ten trong file Lenh, value = ten chuan (theo dim_store).
+# Hien tai viec ha hoa thuong da xu ly het cac case biet -> de trong.
+store_alias: {}
+
+# output de trong = mac dinh dung thu muc output/ o goc project (khuyen dung,
+# de tat ca ket qua tap trung 1 noi). Chi dien gia tri neu that su can doi.
+output_dir: ""
