@@ -72,7 +72,7 @@ class TransferAllocator:
                     gom = stores_sku[stores_sku["Hanh_dong_L3"].isin(["ĐIỂM GOM CHÍNH", "ƯU TIÊN NHẬN"])]
                     gom = gom.sort_values(["Hanh_dong_L3", "Hieu_suat_ky"], ascending=[True, False])
                 else:
-                    # Chưa có Hiệu suất kỳ Lần 2 lưu trong du_lieu/lich_su_hieu_suat_ky.json (chưa
+                    # Chưa có Hiệu suất kỳ Lần 2 lưu trong Data/lich_su_hieu_suat_ky.json (chưa
                     # chạy Lần 2 qua công cụ) — fallback: gom về CH có Hiệu suất kỳ cao nhất.
                     gom = stores_sku.sort_values("Hieu_suat_ky", ascending=False)
                 gom = gom.head(cfg.GOM_DIEM_L3_MAX)

@@ -74,7 +74,7 @@ class PipelineTableBuilder:
 
     def build_all(self, combined_pks, scope_stores_df, forced_round_map=None, hieu_suat_state=None):
         """forced_round_map: {Combined_PK: 'Lan1'|'Lan2'|'Lan3'} — GHI ĐÈ Lần tự suy theo mốc KHPP.
-        hieu_suat_state: dict từ du_lieu/lich_su_hieu_suat_ky.json, khoá 'PK|Store|Lan2' →
+        hieu_suat_state: dict từ Data/lich_su_hieu_suat_ky.json, khoá 'PK|Store|Lan2' →
         {'hieu_suat_ky': ...} — mẫu số Xu hướng ở Lần 3 (Mục 12.1)."""
         hieu_suat_state = hieu_suat_state or {}
         forced_round_map = forced_round_map or {}

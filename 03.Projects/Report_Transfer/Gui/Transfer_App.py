@@ -312,7 +312,7 @@ class TransferApp:
         c6.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         tk.Label(c6, text="🗺️  Toạ độ địa lý", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
         self.do_geocode_var = tk.BooleanVar(value=True)
-        cb_geo = tk.Checkbutton(c6, text="Tự động geocode cửa hàng chưa có toạ độ\n(nếu chưa chạy tao_toa_do.py)",
+        cb_geo = tk.Checkbutton(c6, text="Tự động geocode cửa hàng chưa có toạ độ\n(nếu chưa chạy Generate_Store_Coordinates.py)",
                                 variable=self.do_geocode_var, bg=CARD, fg=TEXT, selectcolor=ENTRY_BG,
                                 activebackground=CARD, activeforeground=TEXT, font=FONT, justify="left",
                                 anchor="w", cursor="hand2")
