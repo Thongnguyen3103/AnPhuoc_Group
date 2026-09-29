@@ -4,6 +4,7 @@ Tài liệu này mô tả **chức năng, nhiệm vụ và luồng chạy** củ
 
 ```
 02.Data_Processing/
+├── Run_All_Processing.bat         ← double-click để mở menu (chạy Run_All_Processing.py)
 ├── Run_All_Processing.py          ← điểm chạy chính: 01.Source → 02.Master / 03.Data_Parquest
 ├── Process_Monthly_Base.py     ← khuôn chung MonthlySourceProcessor
 ├── Convert_Xls_To_Xlsx.py ← đổi .xls → .xlsx (Excel COM) trước bước HDD
@@ -56,7 +57,7 @@ Output Parquet nằm dưới `03.Data_Parquest/` (key `parquet`).
 
 ## 3. Run_All_Processing.py — Điểm chạy chính
 
-Chạy: `python Run_All_Processing.py` (hoặc mở file trong VS Code rồi Run).
+Chạy: double-click **`Run_All_Processing.bat`** (hoặc `python Run_All_Processing.py`).
 
 - Menu checkbox (↑↓ di chuyển, Space tích, Enter chạy, Esc/HỦY thoát).
 - `run_all()` chạy đúng thứ tự: Master → HDD + Tồn kho → Bán lẻ/Bán HĐ (dùng chung lookups) → Kho Xuất CH → Nhập từ SX → History_LC → Trả Kho → Lệnh Điều chuyển.

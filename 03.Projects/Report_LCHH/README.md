@@ -5,7 +5,6 @@
 ```
 03.Projects/Report_LCHH/
   Config_LCHH.yaml              - cấu hình RIÊNG của báo cáo LCHH (kỳ báo cáo, ngưỡng SLA, alias cửa hàng...)
-  Build_Data_LCHH.bat       - chạy 2 entrypoint bên dưới (hỏi tháng)
   Export_Excel_LCHH.bat        - xuất 2 file Excel từ parquet
   Build_Data_LCHH.py        - entrypoint mỏng: chạy LCHHPipeline
   Build_Data_Performance.py   - entrypoint mỏng: chạy PerformanceAnalyzer

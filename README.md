@@ -17,19 +17,19 @@
 │   └── Edit_Download_Accounts.bat    sửa Config/Accounts.json
 │
 ├── 02.Data_Processing/        01.Source → 02.Master / 03.Data_Parquest / CSV
-│   ├── Run_All_Processing.py         menu xử lý từng nguồn
+│   ├── Run_All_Processing.bat / .py  menu xử lý từng nguồn
 │   ├── Process_Revenue_To_Parquet.py doanh thu → 03.Data_Parquest/10.Revenue
 │   ├── Export_Parquet_To_Csv.py      Parquet → 05.Data_Csv
 │   ├── Sources/                      mỗi file = 1 nguồn dữ liệu (Process_Sales.py, Process_Inventory.py...)
 │   └── README.md                     chi tiết từng file
 │
 ├── 03.Projects/               Các báo cáo (chỉ ĐỌC dữ liệu đã xử lý, GHI vào 04.Output)
-│   ├── Report_LCHH/              Build_Data_LCHH.bat, Export_Excel_LCHH.bat
-│   ├── Report_Summary/           Run_Build_Summary.bat        (HTML tự chứa)
-│   ├── Report_Transfer/          Open_Transfer_GUI.bat        (giao diện, cấu trúc OOP)
-│   ├── Report_TopSeller/         Build_Best_Slow_Seller.bat   (giao diện Best/Slow Seller)
-│   ├── Report_QLKD_Weekly/       Export_Weekly_QLKD.bat
-│   └── Inventory_Control/        Run_Review_Web.bat           (web duyệt lệnh điều chuyển, env inventory_env)
+│   ├── Report_LCHH/              Build_Data_LCHH.py, Build_Data_Performance.py, Export_Excel_LCHH.bat
+│   ├── Report_Summary/           Core/Run_Build_Summary.py    (HTML tự chứa)
+│   ├── Report_Transfer/          Open_Transfer_GUI.py         (giao diện, cấu trúc OOP)
+│   ├── Report_TopSeller/         Build_Best_Slow_Seller.py    (giao diện Best/Slow Seller)
+│   ├── Report_QLKD_Weekly/       Export_Weekly_QLKD.py
+│   └── Inventory_Control/        App/Run_Review_Web.py        (web duyệt lệnh điều chuyển, chạy bằng env inventory_env)
 │
 ├── 04.Output/                 OUTPUT DÙNG CHUNG — mỗi project 1 thư mục con cùng tên
 │
@@ -48,7 +48,7 @@
 
 Thứ tự hằng tháng / hằng tuần thường là:
 1. `01.Data_Download` tải file mới về `01.Source`.
-2. `02.Data_Processing/Run_All_Processing.py` → chọn các nguồn vừa tải (lần đầu tháng: chạy **Master** trước).
+2. `02.Data_Processing/Run_All_Processing.bat` → chọn các nguồn vừa tải (lần đầu tháng: chạy **Master** trước).
 3. Nếu cần: `Process_Revenue_To_Parquet.py` (cho Report_QLKD_Weekly), `Export_Parquet_To_Csv.py` (cho Power BI / Inventory_Control).
 4. Chạy báo cáo cần dùng trong `03.Projects/`. Kết quả nằm ở `04.Output/<Project>/`.
 

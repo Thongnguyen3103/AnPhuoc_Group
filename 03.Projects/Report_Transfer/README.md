@@ -10,8 +10,8 @@ pip install duckdb pandas openpyxl numpy
 ## 2. Cấu trúc thư mục (OOP)
 ```
 Report_Transfer/
-├── Open_Transfer_GUI.py / .bat           <- MỞ GIAO DIỆN chạy đợt điều chuyển
-├── Generate_Store_Coordinates.py / .bat  <- (chạy trước, 1 lần) tạo file toạ độ CH
+├── Open_Transfer_GUI.py                  <- MỞ GIAO DIỆN chạy đợt điều chuyển
+├── Generate_Store_Coordinates.py         <- (chạy trước, 1 lần) tạo file toạ độ CH
 │
 ├── Config/                               CẤU HÌNH
 │   ├── Config_Parameters.py              toàn bộ tham số Phụ lục C — chỉnh ở đây khi đổi ngưỡng
