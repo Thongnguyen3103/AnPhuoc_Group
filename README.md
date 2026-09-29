@@ -17,9 +17,9 @@
 │   └── Edit_Download_Accounts.bat    sửa Config/Accounts.json
 │
 ├── 02.Data_Processing/        01.Source → 02.Master / 03.Data_Parquest / CSV
-│   ├── Run_All_Processing.bat        menu xử lý từng nguồn
-│   ├── Process_Revenue_To_Parquet.bat doanh thu → 03.Data_Parquest/10.Revenue
-│   ├── Export_Parquet_To_Csv.bat     Parquet → 05.Data_Csv
+│   ├── Run_All_Processing.py         menu xử lý từng nguồn
+│   ├── Process_Revenue_To_Parquet.py doanh thu → 03.Data_Parquest/10.Revenue
+│   ├── Export_Parquet_To_Csv.py      Parquet → 05.Data_Csv
 │   ├── Sources/                      mỗi file = 1 nguồn dữ liệu (Process_Sales.py, Process_Inventory.py...)
 │   └── README.md                     chi tiết từng file
 │
@@ -48,8 +48,8 @@
 
 Thứ tự hằng tháng / hằng tuần thường là:
 1. `01.Data_Download` tải file mới về `01.Source`.
-2. `02.Data_Processing/Run_All_Processing.bat` → chọn các nguồn vừa tải (lần đầu tháng: chạy **Master** trước).
-3. Nếu cần: `Process_Revenue_To_Parquet.bat` (cho Report_QLKD_Weekly), `Export_Parquet_To_Csv.bat` (cho Power BI / Inventory_Control).
+2. `02.Data_Processing/Run_All_Processing.py` → chọn các nguồn vừa tải (lần đầu tháng: chạy **Master** trước).
+3. Nếu cần: `Process_Revenue_To_Parquet.py` (cho Report_QLKD_Weekly), `Export_Parquet_To_Csv.py` (cho Power BI / Inventory_Control).
 4. Chạy báo cáo cần dùng trong `03.Projects/`. Kết quả nằm ở `04.Output/<Project>/`.
 
 ## Đổi đường dẫn / chuyển máy

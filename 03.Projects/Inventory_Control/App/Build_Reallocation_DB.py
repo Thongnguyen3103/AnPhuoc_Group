@@ -25,7 +25,7 @@ import Get_Paths  # noqa: E402
 BASE_NETWORK        = Path(Get_Paths.phan_tich_o_mang)
 OUTPUT_FILE         = Path(Get_Paths.thu_muc_ket_qua("Inventory_Control")) / "Reallocation_Database.xlsx"
 TRACKING_FILE       = BASE_NETWORK / r"1.Processed_data\1.Data_Tracking.xlsx"
-# So ban: file System_sales.csv do 02.Data_Processing/Export_Parquet_To_Csv.bat xuat ra (05.Data_Csv/02.Raw)
+# So ban: file System_sales.csv do 02.Data_Processing/Export_Parquet_To_Csv.py xuat ra (05.Data_Csv/02.Raw)
 SYSTEM_SALES_FOLDER = Path(Get_Paths.csv_xuat) / "02.Raw"
 SYSTEM_SALES_GLOB   = "System_sales*.csv"
 # Ton kho: doc thang InventorySize.parquet (03.Data_Parquest/03.Inventory)

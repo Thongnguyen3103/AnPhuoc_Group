@@ -4,9 +4,6 @@ Tài liệu này mô tả **chức năng, nhiệm vụ và luồng chạy** củ
 
 ```
 02.Data_Processing/
-├── Run_All_Processing.bat          ← menu chọn nguồn cần xử lý (chạy Run_All_Processing.py)
-├── Process_Revenue_To_Parquet.bat     ← cập nhật doanh thu (Process_Revenue_To_Parquet.py)
-├── Export_Parquet_To_Csv.bat       ← xuất Parquet → CSV (Export_Parquet_To_Csv.py)
 ├── Run_All_Processing.py          ← điểm chạy chính: 01.Source → 02.Master / 03.Data_Parquest
 ├── Process_Monthly_Base.py     ← khuôn chung MonthlySourceProcessor
 ├── Convert_Xls_To_Xlsx.py ← đổi .xls → .xlsx (Excel COM) trước bước HDD
@@ -59,7 +56,7 @@ Output Parquet nằm dưới `03.Data_Parquest/` (key `parquet`).
 
 ## 3. Run_All_Processing.py — Điểm chạy chính
 
-Chạy: double-click **`Run_All_Processing.bat`** (hoặc `python Run_All_Processing.py`).
+Chạy: `python Run_All_Processing.py` (hoặc mở file trong VS Code rồi Run).
 
 - Menu checkbox (↑↓ di chuyển, Space tích, Enter chạy, Esc/HỦY thoát).
 - `run_all()` chạy đúng thứ tự: Master → HDD + Tồn kho → Bán lẻ/Bán HĐ (dùng chung lookups) → Kho Xuất CH → Nhập từ SX → History_LC → Trả Kho → Lệnh Điều chuyển.
@@ -69,8 +66,8 @@ Chạy: double-click **`Run_All_Processing.bat`** (hoặc `python Run_All_Proces
 
 | File | Nhiệm vụ |
 |---|---|
-| **`Process_Revenue_To_Parquet.py`** (`Process_Revenue_To_Parquet.bat`) | Ghi Parquet vào `03.Data_Parquest/10.Revenue` (key `doanh_thu_parquet`), đọc A_Region/D_Category từ `02.Master`: (1) `process_sales_data()` — file `.xls` "DOANH THU THEO NGAY" (`doanh_thu_ngay_2026/2025`) → `Revenue.parquet`; (2) `process_target_data()` — `chi_tieu_cua_hang` → `Target.parquet`; (3) `process_sales_details()` — CSV bán chi tiết (`phan_tich_o_mang/2.System_sales`) → `Bill_sales.parquet`. Dùng bởi `03.Projects/Report_QLKD_Weekly`. |
-| **`Export_Parquet_To_Csv.py`** (`Export_Parquet_To_Csv.bat`) | Parquet đã xử lý → CSV trong `05.Data_Csv/{01.Master, 02.Raw}`. Menu chọn bảng, retry khi file bị khoá. `03.Projects/Inventory_Control` đọc `02.Raw/System_sales.csv` từ đây. |
+| **`Process_Revenue_To_Parquet.py`** | Ghi Parquet vào `03.Data_Parquest/10.Revenue` (key `doanh_thu_parquet`), đọc A_Region/D_Category từ `02.Master`: (1) `process_sales_data()` — file `.xls` "DOANH THU THEO NGAY" (`doanh_thu_ngay_2026/2025`) → `Revenue.parquet`; (2) `process_target_data()` — `chi_tieu_cua_hang` → `Target.parquet`; (3) `process_sales_details()` — CSV bán chi tiết (`phan_tich_o_mang/2.System_sales`) → `Bill_sales.parquet`. Dùng bởi `03.Projects/Report_QLKD_Weekly`. |
+| **`Export_Parquet_To_Csv.py`** | Parquet đã xử lý → CSV trong `05.Data_Csv/{01.Master, 02.Raw}`. Menu chọn bảng, retry khi file bị khoá. `03.Projects/Inventory_Control` đọc `02.Raw/System_sales.csv` từ đây. |
 | **`Convert_Xls_To_Xlsx.py`** | Convert `.xls` → `.xlsx` bằng Excel COM, chạy tự động trước bước HDD. |
 
 ## 5. Sơ đồ luồng dữ liệu
