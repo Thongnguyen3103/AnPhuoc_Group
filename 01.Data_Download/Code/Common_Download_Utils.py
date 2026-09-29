@@ -24,7 +24,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 
 # ----------------------------------------------------------------------------- đường dẫn
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent   # 01.Data_Download (Code/ nam ben trong; Config/, Data/ o ngoai)
 CONFIG_DIR = ROOT / "Config"
 DATA_DIR = ROOT / "Data"
 LOG_DIR = DATA_DIR / "logs"
