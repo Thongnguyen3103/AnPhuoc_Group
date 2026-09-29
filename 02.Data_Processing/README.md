@@ -19,7 +19,7 @@ Dùng chung từ `01.Python_Projects/00.Shared/`:
 
 | File | Nhiệm vụ |
 |---|---|
-| **`cau_hinh.yaml`** + **`Get_Paths.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, DuckDB, CSV export, ổ mạng...). Code dùng `Get_Paths.nguon_ban_le`, `Get_Paths.master`... Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa `cau_hinh.yaml`. |
+| **`00.Shared/Config_Paths.yaml`** + **`Get_Paths.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, DuckDB, CSV export, ổ mạng...). Code dùng `Get_Paths.nguon_ban_le`, `Get_Paths.master`... Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa `00.Shared/Config_Paths.yaml`. |
 | **`doc_ghi_parquet.py`** | `load_master_table(name)` đọc 1 bảng lookup từ `02.Master/*.parquet`; `export_parquet_partitioned(df, dir_name, file_prefix)` xuất Parquet phân mảnh theo Năm/Tháng (mỗi tháng 1 file `<prefix>_<MM>.parquet`, chỉ ghi đè đúng tháng có dữ liệu mới). |
 | **`ngay_thang.py`** | `parse_date(series, fmt)` — parse cột ngày có định dạng tường minh (bỏ phần giờ), cảnh báo số dòng lỗi. |
 | **`quy_doi_size.py`** | `actual_size(system_size, report_item_name)` — quy đổi size hệ thống → size thực tế theo `SIZE_MAP`; `FEMALE_SIZE_MAP` riêng cho hàng Nữ/Jupe/Váy. Dùng chung cho **mọi** nguồn. |
@@ -41,7 +41,7 @@ Hai nguồn dạng "snapshot toàn bộ" — `HDDProcessor` và `InventoryProces
 
 ## 2. Sources/ — Từng nguồn dữ liệu
 
-| File | Class | Input (key trong cau_hinh.yaml) | Output | Đặc điểm riêng |
+| File | Class | Input (key trong Config_Paths.yaml) | Output | Đặc điểm riêng |
 |---|---|---|---|---|
 | **`Update_Master_Tables.py`** | `DataTrackingProcessor` | `data_tracking_excel` + DMHH mới nhất (`danh_muc_hang_hoa`) + file xếp loại CH (`xep_loai_cua_hang`) | `02.Master/{A_Region, B_Size, D_Category, C_BasicSizeChart, E_T-Shirt, F_DataTracking}.parquet` | **Làm mới bảng danh mục (Master)** — nguồn của `load_master_table()` cho mọi processor khác. Luôn full-refresh. |
 | **`Process_InTransit_HDD.py`** | `HDDProcessor` | `nguon_hdd_qlkd` + `nguon_hdd_report` | `02.Master/HDD_QLKD_Tong_hop.parquet` | Gộp 2 nguồn HDD (đối chiếu Số chứng từ trùng), dò encoding linh hoạt. |
@@ -97,7 +97,7 @@ Process_Revenue_To_DuckDB.py ──► 04.Data_Db/01.Data_DuckDB/Report_AP.duckd
 ## 6. Ghi chú khi bảo trì / mở rộng
 
 - **Đổi đường dẫn:** chỉ sửa `00.Shared/Config_Paths.yaml`. Chạy `python -m Get_Paths` (từ thư mục `01.Python_Projects`) để kiểm tra đường dẫn nào đang không tồn tại.
-- **Thêm nguồn "giao dịch theo tháng" mới:** thêm key đường dẫn vào `cau_hinh.yaml`, tạo file trong `Sources/` kế thừa `MonthlySourceProcessor` (khai `source_dir`, `output_dir_name`, `file_prefix`), rồi thêm vào `MENU` của `Run_All_Processing.py`.
+- **Thêm nguồn "giao dịch theo tháng" mới:** thêm key đường dẫn vào `00.Shared/Config_Paths.yaml`, tạo file trong `Sources/` kế thừa `MonthlySourceProcessor` (khai `source_dir`, `output_dir_name`, `file_prefix`), rồi thêm vào `MENU` của `Run_All_Processing.py`.
 - **Đổi quy tắc Size:** sửa `00.Shared/Convert_Size.py` — áp dụng cho toàn bộ nguồn.
 - **Danh mục/khu vực sai:** kiểm tra `Sources/Update_Master_Tables.py` trước, vì mọi nguồn khác merge dựa trên bảng Master.
 - **File CSV đọc lỗi/mất dòng:** mỗi `Sources/*.py` có `robust_read_csv` riêng — kiểm tra cột hay dính dấu phẩy (`Kieu`, `Noidung`...).

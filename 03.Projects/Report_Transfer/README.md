@@ -7,39 +7,69 @@ Máy cần Python 3.9+ (Windows). Mở CMD/PowerShell tại thư mục chứa c�
 pip install duckdb pandas openpyxl numpy
 ```
 
-## 2. Cấu trúc file
+## 2. Cấu trúc thư mục (OOP)
 ```
-bao_cao_dieu_chuyen.py     <- chạy file này cho đợt điều chuyển (hoặc CHAY_BAO_CAO.bat)
-tao_toa_do.py              <- (khuyến nghị chạy trước, 1 lần) tạo file toạ độ CH
-tham_so.py                 <- toàn bộ tham số Phụ lục C — chỉnh ở đây khi cần đổi ngưỡng
-doc_du_lieu.py             <- truy vấn DuckDB
-tinh_toan.py               <- công thức Mục 5 (mã/CH/size), ma trận, cờ BÁN HẾT...
-quy_trinh.py               <- ráp bảng chỉ số SKU / Cửa hàng / Size / (CH x Size)
-phan_bo.py                 <- sinh lệnh điều chuyển (Mục 8/9/13/14), ghép cặp theo khoảng cách thật
-ket_xuat.py                <- tổng hợp Sheet 3/4/5/6 (bảng nội bộ)
-hien_thi.py                <- đổi tên cột sang tiếng Việt hiển thị + dựng nội dung Dashboard Sheet 0
-ghi_excel.py               <- ghi file Excel (style dashboard: navy header, freeze panes...)
-dia_ly.py                  <- geocode địa chỉ + khoảng cách Haversine (km) + ma trận khoảng cách vùng
-du_lieu_dia_ly.py          <- bảng toạ độ tham chiếu theo tên phường/tỉnh
-du_lieu/ViTri_DiaLy_CuaHang.csv        <- (tự tạo bởi tao_toa_do.py) toạ độ từng CH — RÀ SOÁT rồi sửa tay nếu cần
-du_lieu/lich_su_hieu_suat_ky.json      <- (tự tạo khi chạy báo cáo) lưu "Hiệu suất kỳ" để tính Xu hướng Lần 3
+Report_Transfer/
+├── Open_Transfer_GUI.py / .bat           <- MỞ GIAO DIỆN chạy đợt điều chuyển
+├── Generate_Store_Coordinates.py / .bat  <- (chạy trước, 1 lần) tạo file toạ độ CH
+│
+├── Config/                               CẤU HÌNH
+│   ├── Config_Parameters.py              toàn bộ tham số Phụ lục C — chỉnh ở đây khi đổi ngưỡng
+│   ├── Config_Gui_Theme.py               màu + font giao diện
+│   └── Paths_Transfer.py                 đường dẫn (DuckDB, Data/, 04.Output) lấy từ 00.Shared
+│
+├── Core/                                 XỬ LÝ
+│   ├── Load_Data_DuckDB.py      class TransferDataLoader    truy vấn DuckDB (giữ 1 kết nối)
+│   ├── Compute_Metrics.py       class MetricRules           công thức Mục 5, ma trận, cờ BÁN HẾT, cửa sổ size
+│   ├── Build_Pipeline_Tables.py class PipelineTableBuilder  ráp bảng SKU / CH / Size / (CH x Size)
+│   ├── Allocate_Transfers.py    class TransferAllocator     sinh lệnh điều chuyển (Mục 8/9/13/14)
+│   ├── Store_Performance_State.py class PerformanceStateStore  lưu "Hiệu suất kỳ" (Xu hướng Lần 3)
+│   └── Run_Transfer_Report.py   class TransferReportRunner  điều phối trọn 1 lần chạy (không cần GUI)
+│
+├── Geo/                                  ĐỊA LÝ
+│   ├── Compute_Geo_Distance.py  class GeoLocator            geocode + khoảng cách Haversine (km)
+│   └── Geo_Reference_Data.py                                bảng toạ độ tham chiếu phường/tỉnh
+│
+├── Output/                               KẾT XUẤT
+│   ├── Summarize_Output.py      class OutputSummarizer      tổng hợp Sheet 3/4/5/6
+│   ├── Format_Display.py        class DisplayFormatter      đổi tên cột hiển thị + Dashboard Sheet 0
+│   └── Write_Excel_Report.py    class ExcelReportWriter     ghi file Excel 7 sheet
+│
+├── Gui/
+│   └── Transfer_App.py          class TransferApp           cửa sổ giao diện (tkinter)
+│
+└── Data/                                 DỮ LIỆU CHẠY (không phải code)
+    ├── ViTri_DiaLy_CuaHang.csv           toạ độ từng CH — RÀ SOÁT rồi sửa tay nếu cần
+    └── lich_su_hieu_suat_ky.json         "Hiệu suất kỳ" đã lưu để tính Xu hướng Lần 3
+```
 
-Đường dẫn DuckDB lấy từ dung_chung/cau_hinh.yaml (key duckdb_database_ap).
-File Excel kết quả mặc định lưu vào 04_KetQua/BaoCao_DieuChuyen/.
+Luồng chạy: `TransferApp` → `TransferReportRunner.run()` → `TransferDataLoader` →
+`PipelineTableBuilder` (dùng `MetricRules`) → `TransferAllocator` → `OutputSummarizer` →
+`DisplayFormatter` → `ExcelReportWriter`.
+
+Chạy không cần giao diện (vd để test / đặt lịch):
+```python
+import sys; sys.path.insert(0, r"...\03.Projects\Report_Transfer")
+from Core.Run_Transfer_Report import TransferReportRunner
+TransferReportRunner(dict(csv_path=..., db_path=..., out_dir=..., round_choice="AUTO",
+                          selected_regions=[...], excluded_stores=[], do_geocode=True)).run()
 ```
+
+Đường dẫn DuckDB lấy từ `00.Shared/Config_Paths.yaml` (key `duckdb_database_ap`).
+File Excel kết quả mặc định lưu vào `04.Output/Report_Transfer/`.
 
 ## 3. Chạy
 
 **Bước 0 (khuyến nghị, chạy 1 lần trước khi dùng số liệu thật):**
 ```
-python tao_toa_do.py
+python Generate_Store_Coordinates.py
 ```
-→ Tạo `ViTri_DiaLy_CuaHang.csv`, mở bằng Excel rà soát cột `Do_tin_cay`, sửa tay
+→ Tạo `Data/ViTri_DiaLy_CuaHang.csv`, mở bằng Excel rà soát cột `Do_tin_cay`, sửa tay
 Lat/Lon cho các dòng "Thấp" rồi lưu lại (xem Mục 5.1 bên dưới).
 
 **Bước 1 — chạy báo cáo:**
 ```
-python bao_cao_dieu_chuyen.py
+python Open_Transfer_GUI.py
 ```
 Thứ tự hộp thoại hiện ra:
 1. Chọn file CSV danh sách mã cần điều chuyển (cột bắt buộc `Combined PK`).
@@ -50,7 +80,7 @@ Thứ tự hộp thoại hiện ra:
      theo số tháng kể từ KHPP của từng mã — như bản trước), hoặc ép cứng **Lần 1 /
      Lần 2 / Lần 3** cho toàn bộ mã trong file. Lần 2 siết Top% còn ~một nửa (Mục
      11.2); Lần 3 dùng ma trận xu hướng (Mục 12) — cần đã chạy Lần 2 trước đó để có
-     "Hiệu suất kỳ" lưu trong `du_lieu/lich_su_hieu_suat_ky.json`, nếu chưa có script vẫn
+     "Hiệu suất kỳ" lưu trong `Data/lich_su_hieu_suat_ky.json`, nếu chưa có script vẫn
      chạy được nhưng Xu hướng sẽ thiếu dữ liệu so sánh.
 3. Chọn Database_AP.duckdb (nếu không thấy đúng đường dẫn D:\).
 4. Chọn Vùng tham gia + tick bỏ từng cửa hàng muốn loại.
@@ -74,28 +104,28 @@ trúc hiện tại.
 ## 5. Những điểm đã đơn giản hoá — CẦN BIẾT trước khi phát lệnh thật
 
 1. **Khoảng cách địa lý — ĐÃ CÓ toạ độ ước tính, khuyến nghị rà soát trước khi dùng thật:**
-   - Chạy **`python tao_toa_do.py`** (1 lần, hoặc mỗi khi hệ thống mở CH mới) để
-     tạo file `du_lieu/ViTri_DiaLy_CuaHang.csv`. File này suy toạ độ (lat/lon)
+   - Chạy **`python Generate_Store_Coordinates.py`** (1 lần, hoặc mỗi khi hệ thống mở CH mới) để
+     tạo file `Data/ViTri_DiaLy_CuaHang.csv`. File này suy toạ độ (lat/lon)
      từ chính cột "Địa chỉ" trong `A_Region`, khớp theo tên phường/quận trước
      (chính xác hơn), rồi mới rơi về tỉnh/thành phố sau sáp nhập 2025 nếu không khớp
-     được cấp phường. Bảng tên địa danh nằm trong `du_lieu_dia_ly.py`.
+     được cấp phường. Bảng tên địa danh nằm trong `Geo/Geo_Reference_Data.py`.
    - Mở `ViTri_DiaLy_CuaHang.csv` bằng Excel, xem cột **`Do_tin_cay`**: dòng nào ghi
      "Thấp — cần rà soát tay" (thường do CH thiếu địa chỉ trong DB, hoặc địa danh lạ
-     `du_lieu_dia_ly.py` chưa có) thì tự tra Google Maps rồi điền tay `Lat`/`Lon`. Lưu
-     lại file — `bao_cao_dieu_chuyen.py` sẽ tự đọc file này ở lần chạy sau, không cần chỉnh code.
-   - Nếu chưa chạy `tao_toa_do.py`, `bao_cao_dieu_chuyen.py` vẫn tự geocode xấp xỉ ngay lúc chạy
+     `Geo/Geo_Reference_Data.py` chưa có) thì tự tra Google Maps rồi điền tay `Lat`/`Lon`. Lưu
+     lại file — `Open_Transfer_GUI.py` sẽ tự đọc file này ở lần chạy sau, không cần chỉnh code.
+   - Nếu chưa chạy `Generate_Store_Coordinates.py`, `Open_Transfer_GUI.py` vẫn tự geocode xấp xỉ ngay lúc chạy
      (không lưu lại), nên vẫn ra kết quả nhưng độ chính xác thấp hơn.
-   - Thuật toán ghép cặp (`phan_bo.py`) giờ **ưu tiên khoảng cách THẬT** (Haversine,
+   - Thuật toán ghép cặp (`Core/Allocate_Transfers.py`) giờ **ưu tiên khoảng cách THẬT** (Haversine,
      km) trước, đúng như bạn yêu cầu: 1 CH ở rìa Miền Tây có thể được ưu tiên nhận từ
      1 CH rìa TP.HCM gần hơn, thay vì bắt buộc lấy từ CH cùng Vùng nhưng ở xa. Nhãn
      "Nội vùng / Liên vùng" ở Sheet 4 & 5 chỉ còn mang tính MÔ TẢ (đối chiếu Mục 13 —
      đếm số lần chuyển liên vùng), không còn quyết định thứ tự chọn nguồn.
    - Muốn chính xác tuyệt đối (giao thông thực tế, không phải đường chim bay), thay
-     hàm `haversine_km` trong `dia_ly.py` bằng gọi Google Distance Matrix API khi máy
+     hàm `haversine_km` trong `Geo/Compute_Geo_Distance.py` bằng gọi Google Distance Matrix API khi máy
      có mạng ổn định.
 2. **Mùa vụ (Mục 4)**: DuckDB hiện chưa có bảng lịch mùa vụ theo danh mục, nên mọi mã
    đang được coi là "Trong mùa" (không đóng băng, không giới hạn cuối mùa). Khi có
-   bảng mùa vụ, bổ sung bước lọc ngay đầu `quy_trinh.build_all`.
+   bảng mùa vụ, bổ sung bước lọc ngay đầu `PipelineTableBuilder.build_all`.
 
 **Đã sửa (trước đây là bug):** Bảng "Cửa sổ size tiêu chuẩn" ở Sheet 0 từng bị viết
 cứng nên mọi Vùng ra kết quả giống hệt nhau bất kể chọn Lần nào. Giờ bảng này tính
@@ -111,23 +141,23 @@ Mục 6, không phải theo Lần) — đây là điều đúng theo tài liệu
    chéo giữa nhiều mã cùng đợt — nếu bạn chạy nhiều mã cùng lúc và muốn chặn 1 CH
    nhận dồn dập từ nhiều mã, cần bổ sung bước Pha 2 riêng (có thể yêu cầu làm tiếp).
 4. **Lần 2 / Lần 3**: script tự tính Lần theo số tháng kể từ KHPP mỗi mã, và tự lưu
-   "Hiệu suất kỳ" vào `du_lieu/lich_su_hieu_suat_ky.json` sau mỗi lần chạy để dùng cho Xu
+   "Hiệu suất kỳ" vào `Data/lich_su_hieu_suat_ky.json` sau mỗi lần chạy để dùng cho Xu
    hướng ở Lần 3 (Mục 12). Nếu chưa từng chạy Lần 2 cho 1 mã mà mã đó đã đến hạn
    Lần 3, script sẽ không có số liệu Xu hướng — cần chạy đủ tuần tự.
 5. **Ràng buộc "không mâu thuẫn 2 chiều"**: thuật toán phân vai trò nhận/xuất theo
    từng mã sao cho về nguyên tắc 1 CH không vừa là nơi nhận vừa là nơi xuất CÙNG
    size CÙNG mã trong 1 đợt (do Top/ma trận đã tách rạch ròi vai trò importer/exporter
    theo từng trạng thái mã). Bản hiện tại không tự kiểm tra chéo lại điều này sau khi
-   ghi Excel — nếu bạn chỉnh sửa logic phân vai trò trong `phan_bo.py`, nên tự đối
+   ghi Excel — nếu bạn chỉnh sửa logic phân vai trò trong `Core/Allocate_Transfers.py`, nên tự đối
    chiếu Sheet 4 (nhóm theo `Combined PK` + `Size`, kiểm tra không CH nào xuất hiện cả
    ở cột `CH Xuất` lẫn `CH Nhận`).
-6. **Pha 2 (Mục 7.2)**: hàm `phan_bo.build_transfer_orders` hiện chỉ trả về đúng
+6. **Pha 2 (Mục 7.2)**: hàm `TransferAllocator.build_transfer_orders` hiện chỉ trả về đúng
    1 bảng lệnh chi tiết — chưa có bước cộng dồn nhu cầu nhiều mã trong cùng đợt để cắt
    giảm khi vượt hạn mức CH (xem điểm 3 phía trên). Đây là chỗ để bổ sung nếu cần.
 
 ## 6. Muốn chỉnh ngưỡng / tham số
-Toàn bộ số liệu ở Phụ lục C nằm gọn trong `tham_so.py` — sửa xong chạy lại
-`bao_cao_dieu_chuyen.py`, không cần đụng logic tính toán ở các file khác.
+Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parameters.py` — sửa xong chạy lại
+`Open_Transfer_GUI.py`, không cần đụng logic tính toán ở các file khác.
 
 ## 7. ĐÍNH CHÍNH quan trọng (bản cập nhật này)
 
@@ -146,7 +176,7 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `tham_so.py` — sử
 5. **Lần 2 siết vai trò đúng Mục 11.2** (chỉ nhóm A + cờ BÁN HẾT được nhận, nhóm D
    xuất toàn bộ không giữ size); **Lần 3 chạy ma trận xu hướng Mục 12** (Xu hướng =
    Hiệu suất kỳ L3 ÷ L2 đã lưu; gom tối đa 5–10 điểm, còn lại rút hết). Hiệu suất kỳ
-   giờ lưu ĐÚNG bản 3 tháng (không lũy kế) vào du_lieu/lich_su_hieu_suat_ky.json — vì vậy
+   giờ lưu ĐÚNG bản 3 tháng (không lũy kế) vào Data/lich_su_hieu_suat_ky.json — vì vậy
    file state cũ lưu theo bản lũy kế không dùng lại được cho Xu hướng; hãy chạy lại
    Lần 2 bằng bản này trước khi chạy Lần 3.
 6. **Bảng cửa sổ size Sheet 0 áp độ lệch vùng Phụ lục B:** Miền Trung −1 bậc (thiên

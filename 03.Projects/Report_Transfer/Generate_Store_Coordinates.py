@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-tao_toa_do.py
-Tạo file ViTri_DiaLy_CuaHang.csv từ bảng A_Region
-Suy toạ độ từ địa chỉ bằng geocoder (Nominatim hoặc JSON fallback).
+Generate_Store_Coordinates.py — Tạo file Data/ViTri_DiaLy_CuaHang.csv từ bảng A_Region.
+Suy toạ độ từ địa chỉ bằng geocoder (bảng tham chiếu phường/tỉnh trong Geo/Geo_Reference_Data.py).
+Chạy 1 lần (hoặc khi mở CH mới):  python Generate_Store_Coordinates.py
 """
 import os
 import sys
+
 import pandas as pd
-import doc_du_lieu as data
-import dia_ly as geo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # 01.Python_Projects (dung_chung)
-from dung_chung import duong_dan  # noqa: E402
+sys.path.insert(0, HERE)   # Report_Transfer -> import Config/Core/...
 
-DEFAULT_OUTPUT = os.path.join(HERE, "du_lieu", "ViTri_DiaLy_CuaHang.csv")
-DEFAULT_DB = duong_dan.duckdb_database_ap
+from Config import Paths_Transfer as paths  # noqa: E402
+from Core.Load_Data_DuckDB import TransferDataLoader  # noqa: E402
+from Geo.Compute_Geo_Distance import GeoLocator  # noqa: E402
+
+DEFAULT_OUTPUT = paths.GEO_CSV
+DEFAULT_DB = paths.DUCKDB_PATH_DEFAULT
 
 
 def main():
@@ -23,8 +25,11 @@ def main():
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Không tìm thấy database: {db_path}")
 
-    con = data.connect(db_path)
-    stores = data.load_scope_stores(con)
+    loader = TransferDataLoader(db_path)
+    try:
+        stores = loader.load_scope_stores()
+    finally:
+        loader.close()
     if stores.empty:
         print("Không tìm thấy cửa hàng hợp lệ trong A_Region.")
         return
@@ -33,7 +38,7 @@ def main():
     for _, row in stores.iterrows():
         address = row.get("Dia_chi")
         region = row.get("Region")
-        lat, lon, source = geo.geocode_address(address, region)
+        lat, lon, source = GeoLocator.geocode_address(address, region)
         rows.append({
             "Store_name": row["Store_name"],
             "Region": region,

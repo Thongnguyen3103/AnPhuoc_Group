@@ -1,239 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-BÁO CÁO ĐIỀU CHUYỂN HÀNG HÓA — chạy: python bao_cao_dieu_chuyen.py
-Yêu cầu: pip install duckdb pandas openpyxl numpy
-
-Giao diện: 1 cửa sổ duy nhất — chọn file/tham số ngay trên đó, bấm "Chạy Báo Cáo",
-xem tiến trình chạy trực tiếp trong khung log, xong thì bấm nút để mở file kết quả.
-
-Xem README.md để biết chi tiết quy trình, các điểm đã đơn giản hoá, và cách chạy
-tao_toa_do.py trước để có toạ độ cửa hàng chính xác hơn.
-"""
+"""TransferApp — Giao diện Báo cáo Điều chuyển Hàng hoá (1 cửa sổ).
+Chọn file/tham số, bấm "Chạy Báo Cáo", xem tiến trình trong khung log, xong bấm nút mở file kết quả."""
 import os
-import sys
-import json
 import queue
-import traceback
-import threading
-import datetime as dt
 import subprocess
+import sys
+import threading
+import traceback
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, scrolledtext
 
-import pandas as pd
-
-import tham_so as cfg
-import doc_du_lieu as data
-import quy_trinh as pipeline
-import phan_bo as allocate
-import ket_xuat as outp
-import ghi_excel as writer
-import dia_ly as geo_mod
-import tinh_toan as comp
-import hien_thi as disp
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # 01.Python_Projects (dung_chung)
-from dung_chung import duong_dan  # noqa: E402
-
-DUCKDB_PATH_DEFAULT = duong_dan.duckdb_database_ap
-OUT_DIR_DEFAULT = duong_dan.thu_muc_ket_qua("BaoCao_DieuChuyen")   # 04_KetQua/BaoCao_DieuChuyen
-STATE_FILE = os.path.join(HERE, "du_lieu", "lich_su_hieu_suat_ky.json")
-GEO_CSV = os.path.join(HERE, "du_lieu", "ViTri_DiaLy_CuaHang.csv")
+from Config import Paths_Transfer as paths
+from Config.Config_Gui_Theme import (BG, CARD, CARD_BORDER, TEXT, LABEL, ACCENT, ACCENT_HOVER, GREEN, GREEN_HOVER, RED, RED_HOVER, ENTRY_BG, BTN_SECONDARY, BTN_SECONDARY_HOVER, FONT, FONT_BOLD, FONT_TITLE, FONT_BIG_TITLE)
+from Core.Load_Data_DuckDB import TransferDataLoader
+from Core.Run_Transfer_Report import TransferReportRunner, CancelledError
 
 
-class CancelledError(Exception):
-    """Người dùng bấm Huỷ giữa chừng."""
-    pass
-
-
-def _check_cancel(cancel_event):
-    if cancel_event is not None and cancel_event.is_set():
-        raise CancelledError("Đã huỷ theo yêu cầu người dùng.")
-
-
-# ── Bảng màu giao diện (Modern Dark Mode) ──
-BG = "#090d16"           # Darker background for depth
-CARD = "#131a26"         # Card background
-CARD_BORDER = "#223047"  # Slate border
-TEXT = "#f1f5f9"         # Muted white text
-LABEL = "#94a3b8"        # Gray text
-ACCENT = "#3b82f6"       # Blue-500
-ACCENT_HOVER = "#2563eb" # Blue-600
-GREEN = "#10b981"        # Emerald-500
-GREEN_HOVER = "#059669"  # Emerald-600
-RED = "#f43f5e"          # Rose-500
-RED_HOVER = "#e11d48"    # Rose-600
-ENTRY_BG = "#0a0f1d"     # Inner dark entry fields
-BTN_SECONDARY = "#1e293b"# Slate-800
-BTN_SECONDARY_HOVER = "#334155" # Slate-700
-
-FONT = ("Segoe UI", 9)
-FONT_BOLD = ("Segoe UI", 9, "bold")
-FONT_TITLE = ("Segoe UI", 10, "bold")
-FONT_BIG_TITLE = ("Segoe UI", 13, "bold")
-
-
-
-# ---------------------------------------------------------------- State (Lần 3 — Xu hướng)
-def load_state():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
-
-
-def update_state_with_hieu_suat_ky(state, df_store):
-    for _, r in df_store.iterrows():
-        key = f"{r['Combined_PK']}|{r['Store_name']}|{r['Lan_dieu_chuyen']}"
-        state[key] = {"hieu_suat_ky": r["Hieu_suat_ky"], "khi_luu": f"{cfg.CURRENT_YEAR}-{cfg.CURRENT_MONTH:02d}"}
-    return state
-
-
-# ---------------------------------------------------------------- Lõi xử lý (không đụng UI)
-def run_pipeline(params, log, cancel_event=None):
-    """params: dict do App thu thập từ giao diện. log(msg): callback ghi tiến trình.
-    cancel_event: threading.Event — nếu được set() giữa chừng, hàm dừng lại ở điểm
-    kiểm tra gần nhất và ném CancelledError (không huỷ được giữa 1 câu truy vấn SQL
-    hay 1 vòng lặp đang chạy, nhưng dừng ngay giữa các bước lớn).
-    Trả về dict {out_path, n_sku, n_lenh} khi thành công; ném Exception khi lỗi."""
-    csv_path = params["csv_path"]
-    db_path = params["db_path"]
-    out_dir = params["out_dir"]
-    round_choice = params["round_choice"]          # 'AUTO' | 'Lan1' | 'Lan2' | 'Lan3'
-    selected_regions = params["selected_regions"]
-    excluded_stores = params["excluded_stores"]
-    do_geocode = params["do_geocode"]
-
-    df_input = pd.read_csv(csv_path, encoding="utf-8-sig")
-    pk_col = next((c for c in df_input.columns if c.strip().lower().replace("_", " ") == "combined pk"), None)
-    if pk_col is None:
-        raise ValueError("Không tìm thấy cột 'Combined PK' trong file CSV.")
-    combined_pks = df_input[pk_col].dropna().astype(str).str.strip().unique().tolist()
-    log(f"Đã đọc {len(combined_pks)} mã (Combined PK) cần xử lý.")
-    _check_cancel(cancel_event)
-
-    dot_col = next((c for c in df_input.columns if c.strip().lower().replace("_", " ") == "dot chuyen"), None)
-    forced_round_map = {}
-    if dot_col is not None:
-        for _, row in df_input.iterrows():
-            pk_val = str(row[pk_col]).strip()
-            code = comp.parse_round_label(row[dot_col])
-            if pk_val and code:
-                forced_round_map[pk_val] = code
-        n_parsed = len(forced_round_map)
-        log(f"Đã đọc cột 'Dot Chuyen' từ CSV: {n_parsed}/{len(combined_pks)} mã xác định được Lần.")
-        if n_parsed < len(combined_pks):
-            log(f"  → {len(combined_pks) - n_parsed} mã không xác định được Lần từ CSV, sẽ tự suy theo mốc KHPP.")
-    elif round_choice != "AUTO":
-        forced_round_map = {pk: round_choice for pk in combined_pks}
-        log(f"Lần điều chuyển áp dụng cho toàn bộ file: {round_choice}")
-    else:
-        log("Lần điều chuyển: Tự động suy theo mốc KHPP của từng mã.")
-
-    log("Đang kết nối Database...")
-    con = data.connect(db_path)
-    _check_cancel(cancel_event)
-
-    all_stores_df = data.load_scope_stores(con)
-    scope_stores_df = data.load_scope_stores(con, selected_regions=selected_regions, excluded_stores=excluded_stores)
-    log(f"Phạm vi luân chuyển: {len(scope_stores_df)} cửa hàng.")
-    _check_cancel(cancel_event)
-
-    geo_df = data.load_geo_csv(GEO_CSV)
-    if geo_df is not None:
-        log(f"Đã nạp toạ độ từ ViTri_DiaLy_CuaHang.csv ({len(geo_df)} CH).")
-        all_stores_df = all_stores_df.merge(geo_df, on="Store_name", how="left")
-    elif do_geocode:
-        log("Chưa có ViTri_DiaLy_CuaHang.csv — tự geocode xấp xỉ (khuyến nghị chạy tao_toa_do.py để chính xác hơn).")
-        coords = geo_mod.build_store_coords(all_stores_df)
-        all_stores_df["Lat"] = all_stores_df["Store_name"].map(lambda s: coords.get(s, (None, None, None))[0])
-        all_stores_df["Lon"] = all_stores_df["Store_name"].map(lambda s: coords.get(s, (None, None, None))[1])
-    else:
-        all_stores_df["Lat"] = None
-        all_stores_df["Lon"] = None
-        log("Bỏ qua geocode — cột khoảng cách sẽ để trống.")
-    scope_stores_df = scope_stores_df.merge(all_stores_df[["Store_name", "Lat", "Lon"]], on="Store_name", how="left")
-    _check_cancel(cancel_event)
-
-    store_meta = scope_stores_df.set_index("Store_name")[["Region", "Warehouse", "Loai_CH", "Lat", "Lon"]].to_dict("index")
-
-    log("Đang tính chỉ số Mục 5 (mã / cửa hàng / size)...")
-    hieu_suat_state = load_state()
-    df_sku, df_store, df_size, df_store_size, so_ch_pham_vi = pipeline.build_all(
-        con, combined_pks, scope_stores_df, forced_round_map, hieu_suat_state)
-    if df_sku.empty:
-        raise ValueError("Không tìm thấy mã nào khớp trong Database.")
-    ma_op_map = df_sku.set_index("Combined_PK").apply(lambda r: (r["Ma_Hang"], r["Operation"]), axis=1).to_dict()
-    _check_cancel(cancel_event)
-
-    inv_by_size = data.load_inventory_size(con, combined_pks, scope_stores_df["Store_name"].tolist())
-
-    size_weight_by_sku, size_seq_by_sku = {}, {}
-    for pk, g in df_size.groupby("Combined_PK"):
-        size_weight_by_sku[pk] = dict(zip(g["Size"], g["Ty_trong"]))
-    item_name_map = data.load_sku_master(con, combined_pks).set_index("Combined_PK")["System_item_name"].to_dict()
-    size_order_map = data.load_size_order(con, list(set(item_name_map.values())))
-    for pk in df_sku["Combined_PK"]:
-        sizes = list(size_weight_by_sku.get(pk, {}).keys())
-        size_seq_by_sku[pk] = comp.build_size_sequence(sizes, item_name_map.get(pk), size_order_map)
-    _check_cancel(cancel_event)
-
-    log("Đang lập lệnh điều chuyển...")
-    detail_df = allocate.build_transfer_orders(
-        df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
-        so_ch_pham_vi, item_name_map, store_meta)
-    detail_df = allocate.apply_batch_minimum(detail_df)
-    log(f"Đã sinh {len(detail_df)} dòng lệnh chi tiết.")
-    _check_cancel(cancel_event)
-
-    log("Đang tổng hợp các sheet đầu ra...")
-    sheet3_int = outp.build_sheet3(df_store_size, detail_df)
-    sheet4_int = outp.build_sheet4_with_stock(detail_df, inv_by_size, store_meta)
-    sheet5_int = outp.build_sheet5(sheet4_int)
-    sheet6_int = outp.build_sheet6(df_store, sheet4_int, scope_stores_df)
-
-    sheet1_disp = disp.to_display_sheet1(df_sku)
-    sheet2_disp = disp.to_display_sheet2(df_store, ma_op_map)
-    sheet3_disp = disp.to_display_sheet3(sheet3_int, ma_op_map)
-    sheet4_disp = disp.to_display_sheet4(sheet4_int, ma_op_map) if not sheet4_int.empty else sheet4_int
-    sheet5_disp = disp.to_display_sheet5(sheet5_int, ma_op_map) if not sheet5_int.empty else sheet5_int
-    sheet6_disp = disp.to_display_sheet6(sheet6_int)
-    if sheet4_disp.empty:
-        sheet4_disp = pd.DataFrame(columns=["Combined PK", "Ma Hang", "Operation", "Size", "CH Xuất",
-                                             "Region Xuất", "CH Nhận", "Region Nhận", "Loại Lệnh",
-                                             "Khoảng Cách (km)", "SL Chuyển", "Giá Bán", "Giá Trị Chuyển",
-                                             "Tồn Xuất Trước DC", "Tồn Xuất Sau DC", "Tồn Nhận Trước DC", "Tồn Nhận Sau DC"])
-        sheet5_disp = pd.DataFrame(columns=["STT", "CH Xuất", "Combined PK", "Ma Hang", "Size", "SL Chuyển",
-                                             "Giá Trị Chuyển", "CH Nhận", "Region Xuất", "Region Nhận",
-                                             "Loại Lệnh", "Khoảng Cách (km)"])
-    _check_cancel(cancel_event)
-
-    dashboard_kwargs = disp.build_dashboard_kwargs(os.path.basename(csv_path), df_sku, sheet4_disp,
-                                                     all_stores_df, selected_regions, df_store_size)
-
-    os.makedirs(out_dir, exist_ok=True)
-    out_name = f"BaoCao_DieuChuyen_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    out_path = os.path.join(out_dir, out_name)
-    log(f"Đang ghi file Excel: {out_name} ...")
-    _check_cancel(cancel_event)
-    writer.write_workbook(out_path, dashboard_kwargs, sheet1_disp, sheet2_disp, sheet3_disp,
-                           sheet4_disp, sheet5_disp, sheet6_disp)
-
-    state = update_state_with_hieu_suat_ky(hieu_suat_state, df_store)
-    save_state(state)
-
-    log("Hoàn tất.")
-    return dict(out_path=out_path, n_sku=len(df_sku), n_lenh=len(sheet4_disp))
-
-
-# ---------------------------------------------------------------- Giao diện
-class App:
+class TransferApp:
+    """Cửa sổ chọn file/tham số, chạy TransferReportRunner ở luồng nền, hiện log + mở file kết quả."""
     def __init__(self, root):
         self.root = root
         self.root.title("Báo cáo Điều chuyển Hàng hoá")
@@ -452,7 +236,7 @@ class App:
         c2.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
         tk.Label(c2, text="🗄️  Database (DuckDB)", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
         tk.Label(c2, text=" ", font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(anchor="w", padx=12, pady=(0, 4))
-        self.db_var = tk.StringVar(value=DUCKDB_PATH_DEFAULT)
+        self.db_var = tk.StringVar(value=paths.DUCKDB_PATH_DEFAULT)
         self._entry_row(c2, self.db_var, self._browse_db)
         
         reload_btn = tk.Button(c2, text="🔄  Tải lại danh sách cửa hàng", command=self._load_stores_async,
@@ -470,7 +254,7 @@ class App:
         c3 = self._create_rounded_card(row2, BG, CARD, CARD_BORDER)
         c3.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         tk.Label(c3, text="💾  Thư mục lưu file kết quả", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
-        self.out_var = tk.StringVar(value=OUT_DIR_DEFAULT)
+        self.out_var = tk.StringVar(value=paths.output_dir_default())
         self._entry_row(c3, self.out_var, self._browse_out)
         tk.Label(c3, text="(Để trống: lưu cùng thư mục với file CSV)", font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(anchor="w", padx=12, pady=(0, 6))
 
@@ -614,8 +398,11 @@ class App:
 
         def _load():
             try:
-                con = data.connect(self.db_var.get())
-                df = data.load_scope_stores(con)
+                loader = TransferDataLoader(self.db_var.get())
+                try:
+                    df = loader.load_scope_stores()
+                finally:
+                    loader.close()
                 self._store_list = df[["Store_name", "Region", "Loai_CH"]].values.tolist()
                 self.root.after(0, self._refresh_store_checklist)
             except Exception as e:
@@ -760,7 +547,7 @@ class App:
             messagebox.showerror("Lỗi", "Danh sách cửa hàng chưa tải xong — vui lòng đợi rồi thử lại "
                                          "(hoặc bấm '🔄 Tải lại danh sách cửa hàng').")
             return
-        out_dir = self.out_var.get().strip() or OUT_DIR_DEFAULT
+        out_dir = self.out_var.get().strip() or paths.output_dir_default()
         excluded_stores = [name for name, (var, _r) in self._store_vars.items() if not var.get()]
 
         round_display_map = {
@@ -790,7 +577,7 @@ class App:
 
         def _worker():
             try:
-                result = run_pipeline(params, self._log, self._cancel_event)
+                result = TransferReportRunner(params, self._log, self._cancel_event).run()
                 self._log_queue.put(("__DONE__", "ok", result))
             except CancelledError as e:
                 self._log_queue.put(("__DONE__", "cancelled", str(e)))
@@ -846,19 +633,3 @@ class App:
                 subprocess.Popen(["xdg-open", path])
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không mở được:\n{path}\n\n{e}")
-
-
-def main():
-    root = tk.Tk()
-    App(root)
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        traceback.print_exc()
-    finally:
-        # Ép tiến trình thoát ngay khi cửa sổ đóng — tránh treo phiên PowerShell/CMD.
-        os._exit(0)
