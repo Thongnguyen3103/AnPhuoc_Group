@@ -1,0 +1,67 @@
+# ============================================================
+#  CẤU HÌNH ĐƯỜNG DẪN DÙNG CHUNG — toàn bộ 01.Python_Projects
+# ============================================================
+# Đây là NƠI DUY NHẤT khai báo đường dẫn. Mọi project (01.Data_Download,
+# 02.Data_Processing, 03.Projects/*) đọc từ file này qua 00.Shared/Get_Paths.py.
+# KHÔNG ghi cứng đường dẫn trong từng project nữa.
+#
+# Biến dùng được trong giá trị:
+#   ${goc}     = data_root bên dưới
+#   ${du_an}   = thư mục 01.Python_Projects (tự tính, không cần khai)
+#
+# Đổi ổ đĩa / chuyển máy: thường chỉ cần sửa data_root.
+# Trong code dùng: Get_Paths.<key>  (vd Get_Paths.ban_le)
+
+data_root: "D:/AnPhuocGroup/AnPhuoc_Data/00.Data_AnPhuoc_Group"
+
+paths:
+  # ---- Kết quả dùng chung (output của 03.Projects) ----
+  ket_qua:               "${du_an}/04.Output"
+
+  # ---- 01.Source: file gốc CSV/Excel (input của 02.Data_Processing) ----
+  nguon_ban_le:          "${goc}/01.Source/01.System_sales"
+  nguon_ban_hop_dong:    "${goc}/01.Source/02.Contract_sales"
+  nguon_ton_kho:         "${goc}/01.Source/03.Inventory_data"
+  nguon_hdd_qlkd:        "${goc}/01.Source/04.HDD/1.HDD_QLKD"
+  nguon_hdd_report:      "${goc}/01.Source/04.HDD/2.HDD_Report"
+  nguon_kho_xuat_ch:     "${goc}/01.Source/06.KhoXuat_CH"
+  nguon_nhap_sx:         "${goc}/01.Source/05.NhapSX"
+  nguon_tracking_2025:   "${goc}/01.Source/07.Data_Raw/Data_Tracking_2025.xlsx"
+  nguon_lich_su_lc:      "${goc}/01.Source/09.History_LC"
+  nguon_tra_kho:         "${goc}/01.Source/10.TraKho"
+
+  # ---- 02.Master: bảng danh mục ----
+  master:                "${goc}/02.Master"
+  region:                "${goc}/02.Master/A_Region.parquet"
+  data_tracking:         "${goc}/02.Master/F_DataTracking.parquet"
+
+  # ---- 03.Data_Parquest: dữ liệu đã xử lý (output của 02.Data_Processing) ----
+  parquet:               "${goc}/03.Data_Parquest"
+  ban_le:                "${goc}/03.Data_Parquest/01.System_sales"
+  ban_hop_dong:          "${goc}/03.Data_Parquest/02.Contract_sales"
+  ton_kho_parquet:       "${goc}/03.Data_Parquest/03.Inventory"
+  ton_kho_size:          "${goc}/03.Data_Parquest/03.Inventory/InventorySize.parquet"
+  lenh_hhlc:             "${goc}/03.Data_Parquest/07.Lenh_HHLC"
+  lich_su_lc:            "${goc}/03.Data_Parquest/08.History_LC"
+  tra_kho:               "${goc}/03.Data_Parquest/09.TraKho"
+
+  # ---- 04.Data_Db: DuckDB ----
+  duckdb_database_ap:    "${goc}/04.Data_Db/01.Data_DuckDB/Database_AP.duckdb"
+  duckdb_report_ap:      "${goc}/04.Data_Db/01.Data_DuckDB/Report_AP.duckdb"
+
+  # ---- 05.Data_Csv: bản CSV xuất cho Power BI / chia sẻ ----
+  csv_xuat:              "${goc}/05.Data_Csv"
+
+  # ---- 06.Data_Images: ảnh sản phẩm ----
+  hinh_anh:              "${goc}/06.Data_Images"
+
+  # ---- Ổ mạng / file ngoài kho dữ liệu ----
+  hhlc_o_mang:           "//hovmfs01/PKD/PhanPhoi/DieuChuyen_HH_HTCH/Recode_DieuChuyen"
+  phan_tich_o_mang:      "//hovmfs01/PKD/PhanPhoi/Thong.Nguyen/Analysis_data"
+  hinh_anh_san_pham:     "//hovmfs01/PKD/PhanPhoi/Thong.Nguyen/Report_BestSeller/03.Hinh_anh_sp"
+  data_tracking_excel:   "D:/AnPhuocGroup/AnPhuoc_Report/Analysis_data/1.Processed_data/1.Data_Tracking.xlsx"
+  xep_loai_cua_hang:     "X:/Hang Ni/DOANH THU DOI CHIEU NXT/2026/1. DS TONG HOP XEP LOAI CUA HANG 2026.xlsx"
+  danh_muc_hang_hoa:     "X:/ANAMAI BONJOUR"
+  doanh_thu_ngay_2026:   "Z:/DOANH THU THEO NGAY 2026"
+  doanh_thu_ngay_2025:   "Z:/DOANH THU THEO NGAY 2025"
+  chi_tieu_cua_hang:     "Z:/DOANH THU CUA HANG NAM-2026.xlsx"

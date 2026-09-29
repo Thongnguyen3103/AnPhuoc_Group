@@ -10,8 +10,8 @@ venv/
 .claude/
 
 # Luu tru, ket qua dung chung (khong dua vao git)
-99_LuuTru/
-04_KetQua/
+99.Archive/
+04.Output/
 
 # Du lieu (khong phai code)
 *.parquet
@@ -26,14 +26,14 @@ desktop.ini
 
 # Tai khoan / mat khau
 **/accounts.json
-**/tai_khoan.json
+**/Accounts.json
 
 # Du lieu chay cua tung project (log, debug, cache, trang thai)
-**/data/logs/
-**/data/debug/
-**/data/_tmp_download/
-**/du_lieu/
-**/du_lieu_tam/
+
+
+
+**/Data/
+**/Cache/
 **/dist/
 **/output/
 **/database/
