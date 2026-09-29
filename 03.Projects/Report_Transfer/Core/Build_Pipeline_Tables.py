@@ -2,7 +2,7 @@
 """PipelineTableBuilder — Ráp dữ liệu thô thành 4 bảng: SKU / CH / Size / (CH x Size)."""
 import pandas as pd
 from Config import Config_Parameters as cfg
-from Core.Load_Data_DuckDB import TransferDataLoader as data
+from Core.Load_Data_Parquet import TransferDataLoader as data
 from Core.Compute_Metrics import MetricRules as comp
 
 

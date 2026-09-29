@@ -12,7 +12,7 @@ from tkinter import filedialog, messagebox, ttk, scrolledtext
 
 from Config import Paths_Transfer as paths
 from Config.Config_Gui_Theme import (BG, CARD, CARD_BORDER, TEXT, LABEL, ACCENT, ACCENT_HOVER, GREEN, GREEN_HOVER, RED, RED_HOVER, ENTRY_BG, BTN_SECONDARY, BTN_SECONDARY_HOVER, FONT, FONT_BOLD, FONT_TITLE, FONT_BIG_TITLE)
-from Core.Load_Data_DuckDB import TransferDataLoader
+from Core.Load_Data_Parquet import TransferDataLoader
 from Core.Run_Transfer_Report import TransferReportRunner, CancelledError
 
 
@@ -219,7 +219,7 @@ class TransferApp:
                 canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
         self.root.bind_all("<MouseWheel>", _on_mousewheel)
 
-        # 1) + 2) CSV & Database — 2 cột song song (thiết kế tinh gọn)
+        # 1) + 2) CSV & Kho dữ liệu Parquet — 2 cột song song (thiết kế tinh gọn)
         paths_row = tk.Frame(sf, bg=BG)
         paths_row.pack(fill="x", padx=14, pady=4)
         paths_row.grid_columnconfigure(0, weight=1, uniform="path")
@@ -234,9 +234,9 @@ class TransferApp:
 
         c2 = self._create_rounded_card(paths_row, BG, CARD, CARD_BORDER)
         c2.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
-        tk.Label(c2, text="🗄️  Database (DuckDB)", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
+        tk.Label(c2, text="🗄️  Kho dữ liệu (Parquet)", font=FONT_TITLE, bg=CARD, fg="#60a5fa").pack(anchor="w", padx=12, pady=(8, 2))
         tk.Label(c2, text=" ", font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(anchor="w", padx=12, pady=(0, 4))
-        self.db_var = tk.StringVar(value=paths.DUCKDB_PATH_DEFAULT)
+        self.db_var = tk.StringVar(value=paths.DATA_ROOT_DEFAULT)
         self._entry_row(c2, self.db_var, self._browse_db)
         
         reload_btn = tk.Button(c2, text="🔄  Tải lại danh sách cửa hàng", command=self._load_stores_async,
@@ -382,8 +382,7 @@ class TransferApp:
                 self.out_var.set(os.path.dirname(path))
 
     def _browse_db(self):
-        path = filedialog.askopenfilename(title="Chọn Database_AP.duckdb",
-                                           filetypes=[("DuckDB", "*.duckdb"), ("All files", "*.*")])
+        path = filedialog.askdirectory(title="Chọn thư mục kho dữ liệu (00.Data_AnPhuoc_Group — chứa 02.Master, 03.Data_Parquest)")
         if path:
             self.db_var.set(path)
 
@@ -539,9 +538,9 @@ class TransferApp:
         if not csv_path or not os.path.exists(csv_path):
             messagebox.showerror("Lỗi", "Vui lòng chọn file CSV hợp lệ.")
             return
-        db_path = self.db_var.get().strip()
-        if not db_path or not os.path.exists(db_path):
-            messagebox.showerror("Lỗi", "Không tìm thấy file Database (.duckdb) — vui lòng chọn lại.")
+        data_root = self.db_var.get().strip()
+        if not data_root or not os.path.isdir(os.path.join(data_root, "03.Data_Parquest")):
+            messagebox.showerror("Lỗi", "Thư mục kho dữ liệu không đúng (phải chứa 02.Master và 03.Data_Parquest) — vui lòng chọn lại.")
             return
         if not self._store_vars:
             messagebox.showerror("Lỗi", "Danh sách cửa hàng chưa tải xong — vui lòng đợi rồi thử lại "
@@ -560,7 +559,7 @@ class TransferApp:
         round_choice = round_display_map.get(selected_display, "AUTO")
 
         params = dict(
-            csv_path=csv_path, db_path=db_path, out_dir=out_dir,
+            csv_path=csv_path, data_root=data_root, out_dir=out_dir,
             round_choice=round_choice, selected_regions=self._active_regions(),
             excluded_stores=excluded_stores, do_geocode=self.do_geocode_var.get(),
         )

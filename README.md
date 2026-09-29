@@ -5,9 +5,9 @@
 ```
 01.Python_Projects/
 ├── 00.Shared/                 SOURCE DÙNG CHUNG — sửa 1 nơi, mọi project dùng được
-│   ├── Config_Paths.yaml         ← MỌI đường dẫn (kho dữ liệu, DuckDB, ổ mạng X:/Z:, 04.Output...)
+│   ├── Config_Paths.yaml         ← MỌI đường dẫn (kho dữ liệu Parquet, ổ mạng X:/Z:, 04.Output...)
 │   ├── Get_Paths.py              ← đọc Config_Paths.yaml:  Get_Paths.ban_le, Get_Paths.thu_muc_ket_qua("...")
-│   ├── Read_Write_Parquet.py     ← đọc bảng Master, ghi Parquet phân mảnh năm/tháng
+│   ├── Read_Write_Parquet.py     ← đọc bảng theo tên (connect_parquet_views / read_table), ghi Parquet năm/tháng
 │   ├── Convert_Size.py           ← quy đổi size hệ thống → size thực tế
 │   └── Parse_Date.py             ← parse ngày
 │
@@ -16,9 +16,9 @@
 │   ├── Run_Download_Background.bat   chạy ngầm các mục đang tích (dùng để đặt lịch)
 │   └── Edit_Download_Accounts.bat    sửa Config/Accounts.json
 │
-├── 02.Data_Processing/        01.Source → 02.Master / 03.Data_Parquest / DuckDB / CSV
+├── 02.Data_Processing/        01.Source → 02.Master / 03.Data_Parquest / CSV
 │   ├── Run_All_Processing.bat        menu xử lý từng nguồn
-│   ├── Process_Revenue_To_DuckDB.bat doanh thu → Report_AP.duckdb
+│   ├── Process_Revenue_To_Parquet.bat doanh thu → 03.Data_Parquest/10.Revenue
 │   ├── Export_Parquet_To_Csv.bat     Parquet → 05.Data_Csv
 │   ├── Sources/                      mỗi file = 1 nguồn dữ liệu (Process_Sales.py, Process_Inventory.py...)
 │   └── README.md                     chi tiết từng file
@@ -40,7 +40,7 @@
 
 ```
 01.Data_Download ─► 00.Data_AnPhuoc_Group/01.Source ─► 02.Data_Processing ─► 02.Master, 03.Data_Parquest,
-                                                                             04.Data_Db (DuckDB), 05.Data_Csv
+                                                                             05.Data_Csv
                                                                                     │
                                                                                     ▼
                                                                 03.Projects/<Project> ─► 04.Output/<Project>
@@ -49,7 +49,7 @@
 Thứ tự hằng tháng / hằng tuần thường là:
 1. `01.Data_Download` tải file mới về `01.Source`.
 2. `02.Data_Processing/Run_All_Processing.bat` → chọn các nguồn vừa tải (lần đầu tháng: chạy **Master** trước).
-3. Nếu cần: `Process_Revenue_To_DuckDB.bat` (cho Report_QLKD_Weekly), `Export_Parquet_To_Csv.bat` (cho Power BI / Inventory_Control).
+3. Nếu cần: `Process_Revenue_To_Parquet.bat` (cho Report_QLKD_Weekly), `Export_Parquet_To_Csv.bat` (cho Power BI / Inventory_Control).
 4. Chạy báo cáo cần dùng trong `03.Projects/`. Kết quả nằm ở `04.Output/<Project>/`.
 
 ## Đổi đường dẫn / chuyển máy
@@ -65,6 +65,18 @@ In ra từng đường dẫn kèm `[OK ]` / `[---]` (không tồn tại).
 
 Các file `.bat` gọi Python qua `%USERPROFILE%\anaconda3\python.exe`, nên chạy được trên máy khác
 có Anaconda cài mặc định mà không cần sửa.
+
+## Đọc dữ liệu: chỉ Parquet
+
+Không dùng file `.duckdb` nữa. Mọi project đọc thẳng file Parquet trong `02.Master` và `03.Data_Parquest`.
+Muốn viết SQL theo tên bảng (như trước với DuckDB):
+
+```python
+from Read_Write_Parquet import connect_parquet_views, read_table
+con = connect_parquet_views()                          # VIEW A_Region, System_sales, InventorySize, Revenue...
+df = con.execute("SELECT * FROM A_Region").fetchdf()
+df = read_table("D_Category")                           # hoặc đọc 1 bảng ra DataFrame
+```
 
 ## Viết script mới
 

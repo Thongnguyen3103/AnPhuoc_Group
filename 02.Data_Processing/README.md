@@ -5,13 +5,13 @@ Tài liệu này mô tả **chức năng, nhiệm vụ và luồng chạy** củ
 ```
 02.Data_Processing/
 ├── Run_All_Processing.bat          ← menu chọn nguồn cần xử lý (chạy Run_All_Processing.py)
-├── Process_Revenue_To_DuckDB.bat      ← cập nhật DuckDB doanh thu (Process_Revenue_To_DuckDB.py)
+├── Process_Revenue_To_Parquet.bat     ← cập nhật doanh thu (Process_Revenue_To_Parquet.py)
 ├── Export_Parquet_To_Csv.bat       ← xuất Parquet → CSV (Export_Parquet_To_Csv.py)
 ├── Run_All_Processing.py          ← điểm chạy chính: 01.Source → 02.Master / 03.Data_Parquest
 ├── Process_Monthly_Base.py     ← khuôn chung MonthlySourceProcessor
 ├── Convert_Xls_To_Xlsx.py ← đổi .xls → .xlsx (Excel COM) trước bước HDD
 ├── Export_Parquet_To_Csv.py     ← Parquet → 05.Data_Csv (cho Power BI)
-├── Process_Revenue_To_DuckDB.py            ← doanh thu ngày + chỉ tiêu + bill → Report_AP.duckdb
+├── Process_Revenue_To_Parquet.py           ← doanh thu ngày + chỉ tiêu + bill → 03.Data_Parquest/10.Revenue
 └── Sources/                  ← mỗi file = 1 nguồn dữ liệu
 ```
 
@@ -19,7 +19,7 @@ Dùng chung từ `01.Python_Projects/00.Shared/`:
 
 | File | Nhiệm vụ |
 |---|---|
-| **`00.Shared/Config_Paths.yaml`** + **`Get_Paths.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, DuckDB, CSV export, ổ mạng...). Code dùng `Get_Paths.nguon_ban_le`, `Get_Paths.master`... Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa `00.Shared/Config_Paths.yaml`. |
+| **`00.Shared/Config_Paths.yaml`** + **`Get_Paths.py`** | **Nơi duy nhất khai báo đường dẫn** (thư mục nguồn, Master, Parquet, CSV export, ổ mạng...). Code dùng `Get_Paths.nguon_ban_le`, `Get_Paths.master`... Muốn đổi ổ đĩa/vị trí thư mục — chỉ sửa `00.Shared/Config_Paths.yaml`. |
 | **`doc_ghi_parquet.py`** | `load_master_table(name)` đọc 1 bảng lookup từ `02.Master/*.parquet`; `export_parquet_partitioned(df, dir_name, file_prefix)` xuất Parquet phân mảnh theo Năm/Tháng (mỗi tháng 1 file `<prefix>_<MM>.parquet`, chỉ ghi đè đúng tháng có dữ liệu mới). |
 | **`ngay_thang.py`** | `parse_date(series, fmt)` — parse cột ngày có định dạng tường minh (bỏ phần giờ), cảnh báo số dòng lỗi. |
 | **`quy_doi_size.py`** | `actual_size(system_size, report_item_name)` — quy đổi size hệ thống → size thực tế theo `SIZE_MAP`; `FEMALE_SIZE_MAP` riêng cho hàng Nữ/Jupe/Váy. Dùng chung cho **mọi** nguồn. |
@@ -69,7 +69,7 @@ Chạy: double-click **`Run_All_Processing.bat`** (hoặc `python Run_All_Proces
 
 | File | Nhiệm vụ |
 |---|---|
-| **`Process_Revenue_To_DuckDB.py`** (`Process_Revenue_To_DuckDB.bat`) | Ghi vào DuckDB `duckdb_report_ap`: (1) `process_sales_data()` — file `.xls` "DOANH THU THEO NGAY" (`doanh_thu_ngay_2026/2025`) → table `revenue`; (2) `process_target_data()` — `chi_tieu_cua_hang` → table `target`; (3) `process_sales_details()` — CSV bán chi tiết (`phan_tich_o_mang/2.System_sales`) → table `bill_sales`. Dùng bởi `03.Projects/Report_QLKD_Weekly`. |
+| **`Process_Revenue_To_Parquet.py`** (`Process_Revenue_To_Parquet.bat`) | Ghi Parquet vào `03.Data_Parquest/10.Revenue` (key `doanh_thu_parquet`), đọc A_Region/D_Category từ `02.Master`: (1) `process_sales_data()` — file `.xls` "DOANH THU THEO NGAY" (`doanh_thu_ngay_2026/2025`) → `Revenue.parquet`; (2) `process_target_data()` — `chi_tieu_cua_hang` → `Target.parquet`; (3) `process_sales_details()` — CSV bán chi tiết (`phan_tich_o_mang/2.System_sales`) → `Bill_sales.parquet`. Dùng bởi `03.Projects/Report_QLKD_Weekly`. |
 | **`Export_Parquet_To_Csv.py`** (`Export_Parquet_To_Csv.bat`) | Parquet đã xử lý → CSV trong `05.Data_Csv/{01.Master, 02.Raw}`. Menu chọn bảng, retry khi file bị khoá. `03.Projects/Inventory_Control` đọc `02.Raw/System_sales.csv` từ đây. |
 | **`Convert_Xls_To_Xlsx.py`** | Convert `.xls` → `.xlsx` bằng Excel COM, chạy tự động trước bước HDD. |
 
@@ -91,10 +91,12 @@ Chạy: double-click **`Run_All_Processing.bat`** (hoặc `python Run_All_Proces
                          ▼
                  03.Projects/* (báo cáo)  ──►  04.Output/<TenDuAn>/
 
-Process_Revenue_To_DuckDB.py ──► 04.Data_Db/01.Data_DuckDB/Report_AP.duckdb ──► 03.Projects/Report_QLKD_Weekly
+Process_Revenue_To_Parquet.py ──► 03.Data_Parquest/10.Revenue/*.parquet ──► 03.Projects/Report_QLKD_Weekly
 ```
 
 ## 6. Ghi chú khi bảo trì / mở rộng
+
+- **Không dùng file `.duckdb`.** Mọi project đọc thẳng Parquet. Cần truy vấn SQL theo tên bảng thì dùng `00.Shared/Read_Write_Parquet.py`: `connect_parquet_views()` (VIEW `A_Region`, `System_sales`, `Revenue`... trỏ vào file parquet) hoặc `read_table("D_Category")`. Bảng mới → thêm 1 dòng vào `PARQUET_TABLES`.
 
 - **Đổi đường dẫn:** chỉ sửa `00.Shared/Config_Paths.yaml`. Chạy `python -m Get_Paths` (từ thư mục `01.Python_Projects`) để kiểm tra đường dẫn nào đang không tồn tại.
 - **Thêm nguồn "giao dịch theo tháng" mới:** thêm key đường dẫn vào `00.Shared/Config_Paths.yaml`, tạo file trong `Sources/` kế thừa `MonthlySourceProcessor` (khai `source_dir`, `output_dir_name`, `file_prefix`), rồi thêm vào `MENU` của `Run_All_Processing.py`.

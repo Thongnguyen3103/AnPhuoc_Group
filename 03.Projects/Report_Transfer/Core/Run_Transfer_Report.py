@@ -4,7 +4,7 @@
     runner = TransferReportRunner(params, log=print)
     result = runner.run()      # -> {out_path, n_sku, n_lenh}
 
-params: csv_path, db_path, out_dir, round_choice ('AUTO'|'Lan1'|'Lan2'|'Lan3'),
+params: csv_path, data_root, out_dir, round_choice ('AUTO'|'Lan1'|'Lan2'|'Lan3'),
         selected_regions, excluded_stores, do_geocode
 """
 import datetime as dt
@@ -16,7 +16,7 @@ from Config import Paths_Transfer as paths
 from Core.Allocate_Transfers import TransferAllocator
 from Core.Build_Pipeline_Tables import PipelineTableBuilder
 from Core.Compute_Metrics import MetricRules
-from Core.Load_Data_DuckDB import TransferDataLoader
+from Core.Load_Data_Parquet import TransferDataLoader
 from Core.Store_Performance_State import PerformanceStateStore
 from Geo.Compute_Geo_Distance import GeoLocator
 from Output.Format_Display import DisplayFormatter
@@ -147,8 +147,8 @@ class TransferReportRunner:
     def run(self):
         combined_pks, forced_round_map = self._read_input()
 
-        self.log("Đang kết nối Database...")
-        loader = TransferDataLoader(self.params["db_path"])
+        self.log("Đang nạp dữ liệu Parquet...")
+        loader = TransferDataLoader(self.params.get("data_root"))
         try:
             self._check_cancel()
             all_stores_df, scope_stores_df = self._load_stores(loader)
@@ -159,7 +159,7 @@ class TransferReportRunner:
             df_sku, df_store, df_size, df_store_size, so_ch_pham_vi = PipelineTableBuilder(loader).build_all(
                 combined_pks, scope_stores_df, forced_round_map, hieu_suat_state)
             if df_sku.empty:
-                raise ValueError("Không tìm thấy mã nào khớp trong Database.")
+                raise ValueError("Không tìm thấy mã nào khớp trong dữ liệu (F_DataTracking).")
             self._check_cancel()
 
             inv_by_size = loader.load_inventory_size(combined_pks, scope_stores_df["Store_name"].tolist())

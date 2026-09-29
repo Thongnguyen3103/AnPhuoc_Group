@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Đường dẫn của project Report_Transfer (lấy gốc từ 00.Shared/Config_Paths.yaml)."""
+"""Đường dẫn của project Report_Transfer (lấy gốc từ 00.Shared/Config_Paths.yaml).
+Đồng thời đưa 00.Shared vào sys.path để import Get_Paths / Read_Write_Parquet."""
 import os
 import sys
 
@@ -13,7 +14,7 @@ DATA_DIR = os.path.join(PROJECT_DIR, "Data")
 STATE_FILE = os.path.join(DATA_DIR, "lich_su_hieu_suat_ky.json")     # Hiệu suất kỳ đã lưu (Xu hướng Lần 3)
 GEO_CSV = os.path.join(DATA_DIR, "ViTri_DiaLy_CuaHang.csv")          # toạ độ cửa hàng
 
-DUCKDB_PATH_DEFAULT = Get_Paths.duckdb_database_ap
+DATA_ROOT_DEFAULT = Get_Paths.DATA_ROOT       # 00.Data_AnPhuoc_Group (chứa 02.Master, 03.Data_Parquest)
 
 
 def output_dir_default():

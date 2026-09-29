@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
-"""TransferDataLoader — Đọc dữ liệu từ DuckDB (Database_AP.duckdb). Giữ 1 kết nối read-only cho cả phiên chạy."""
+"""TransferDataLoader — Đọc dữ liệu trực tiếp từ file Parquet (02.Master, 03.Data_Parquest).
+Không dùng file .duckdb: DuckDB chỉ chạy trong RAM, mỗi bảng (A_Region, System_sales...) là 1 VIEW
+trỏ thẳng vào file parquet (xem 00.Shared/Read_Write_Parquet.py)."""
 import re
-import duckdb
 import pandas as pd
 from Config import Config_Parameters as cfg
+from Config import Paths_Transfer as paths  # noqa: F401  (đưa 00.Shared vào sys.path)
+import Read_Write_Parquet
+
+TABLES = ["A_Region", "Inventory", "InventorySize", "System_sales", "F_DataTracking",
+          "D_Category", "C_BasicSizeChart", "NhapTuSX"]
 
 
 class TransferDataLoader:
-    """Đọc dữ liệu từ DuckDB (Database_AP.duckdb). Giữ 1 kết nối read-only cho cả phiên chạy."""
+    """Đọc dữ liệu từ Parquet. data_root: gốc kho dữ liệu (00.Data_AnPhuoc_Group) — None = theo
+    00.Shared/Config_Paths.yaml. Giữ 1 kết nối DuckDB trong RAM cho cả phiên chạy."""
 
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self.con = duckdb.connect(db_path, read_only=True)
+    def __init__(self, data_root=None):
+        self.data_root = data_root
+        self.con = Read_Write_Parquet.connect_parquet_views(TABLES, data_root)
 
     def close(self):
         self.con.close()

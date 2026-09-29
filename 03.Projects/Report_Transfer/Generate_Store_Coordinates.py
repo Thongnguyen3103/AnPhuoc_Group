@@ -13,19 +13,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)   # Report_Transfer -> import Config/Core/...
 
 from Config import Paths_Transfer as paths  # noqa: E402
-from Core.Load_Data_DuckDB import TransferDataLoader  # noqa: E402
+from Core.Load_Data_Parquet import TransferDataLoader  # noqa: E402
 from Geo.Compute_Geo_Distance import GeoLocator  # noqa: E402
 
 DEFAULT_OUTPUT = paths.GEO_CSV
-DEFAULT_DB = paths.DUCKDB_PATH_DEFAULT
+DEFAULT_DATA_ROOT = paths.DATA_ROOT_DEFAULT
 
 
 def main():
-    db_path = DEFAULT_DB
-    if not os.path.exists(db_path):
-        raise FileNotFoundError(f"Không tìm thấy database: {db_path}")
+    data_root = DEFAULT_DATA_ROOT
+    if not os.path.isdir(data_root):
+        raise FileNotFoundError(f"Không tìm thấy kho dữ liệu: {data_root}")
 
-    loader = TransferDataLoader(db_path)
+    loader = TransferDataLoader(data_root)
     try:
         stores = loader.load_scope_stores()
     finally:

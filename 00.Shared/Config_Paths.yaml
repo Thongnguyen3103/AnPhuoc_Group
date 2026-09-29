@@ -44,10 +44,12 @@ paths:
   lenh_hhlc:             "${goc}/03.Data_Parquest/07.Lenh_HHLC"
   lich_su_lc:            "${goc}/03.Data_Parquest/08.History_LC"
   tra_kho:               "${goc}/03.Data_Parquest/09.TraKho"
+  nhap_sx_parquet:       "${goc}/03.Data_Parquest/05.NhapSX"
+  kho_xuat_ch_parquet:   "${goc}/03.Data_Parquest/06.KhoXuat_CH"
+  doanh_thu_parquet:     "${goc}/03.Data_Parquest/10.Revenue"    # Revenue / Target / Bill_sales .parquet
 
-  # ---- 04.Data_Db: DuckDB ----
-  duckdb_database_ap:    "${goc}/04.Data_Db/01.Data_DuckDB/Database_AP.duckdb"
-  duckdb_report_ap:      "${goc}/04.Data_Db/01.Data_DuckDB/Report_AP.duckdb"
+  # (Không dùng file .duckdb nữa — mọi project đọc thẳng Parquet qua
+  #  00.Shared/Read_Write_Parquet.py: connect_parquet_views() / read_table())
 
   # ---- 05.Data_Csv: bản CSV xuất cho Power BI / chia sẻ ----
   csv_xuat:              "${goc}/05.Data_Csv"

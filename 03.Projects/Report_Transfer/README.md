@@ -16,10 +16,10 @@ Report_Transfer/
 ├── Config/                               CẤU HÌNH
 │   ├── Config_Parameters.py              toàn bộ tham số Phụ lục C — chỉnh ở đây khi đổi ngưỡng
 │   ├── Config_Gui_Theme.py               màu + font giao diện
-│   └── Paths_Transfer.py                 đường dẫn (DuckDB, Data/, 04.Output) lấy từ 00.Shared
+│   └── Paths_Transfer.py                 đường dẫn (kho Parquet, Data/, 04.Output) lấy từ 00.Shared
 │
 ├── Core/                                 XỬ LÝ
-│   ├── Load_Data_DuckDB.py      class TransferDataLoader    truy vấn DuckDB (giữ 1 kết nối)
+│   ├── Load_Data_Parquet.py     class TransferDataLoader    đọc thẳng Parquet (02.Master, 03.Data_Parquest)
 │   ├── Compute_Metrics.py       class MetricRules           công thức Mục 5, ma trận, cờ BÁN HẾT, cửa sổ size
 │   ├── Build_Pipeline_Tables.py class PipelineTableBuilder  ráp bảng SKU / CH / Size / (CH x Size)
 │   ├── Allocate_Transfers.py    class TransferAllocator     sinh lệnh điều chuyển (Mục 8/9/13/14)
@@ -51,11 +51,11 @@ Chạy không cần giao diện (vd để test / đặt lịch):
 ```python
 import sys; sys.path.insert(0, r"...\03.Projects\Report_Transfer")
 from Core.Run_Transfer_Report import TransferReportRunner
-TransferReportRunner(dict(csv_path=..., db_path=..., out_dir=..., round_choice="AUTO",
+TransferReportRunner(dict(csv_path=..., data_root=None, out_dir=..., round_choice="AUTO",
                           selected_regions=[...], excluded_stores=[], do_geocode=True)).run()
 ```
 
-Đường dẫn DuckDB lấy từ `00.Shared/Config_Paths.yaml` (key `duckdb_database_ap`).
+Dữ liệu đọc TRỰC TIẾP từ Parquet (không dùng file .duckdb) — đường dẫn lấy từ `00.Shared/Config_Paths.yaml`.
 File Excel kết quả mặc định lưu vào `04.Output/Report_Transfer/`.
 
 ## 3. Chạy
@@ -82,7 +82,7 @@ Thứ tự hộp thoại hiện ra:
      11.2); Lần 3 dùng ma trận xu hướng (Mục 12) — cần đã chạy Lần 2 trước đó để có
      "Hiệu suất kỳ" lưu trong `Data/lich_su_hieu_suat_ky.json`, nếu chưa có script vẫn
      chạy được nhưng Xu hướng sẽ thiếu dữ liệu so sánh.
-3. Chọn Database_AP.duckdb (nếu không thấy đúng đường dẫn D:\).
+3. Kho dữ liệu Parquet: mặc định `00.Data_AnPhuoc_Group` theo Config_Paths.yaml (chỉ đổi khi dữ liệu nằm chỗ khác).
 4. Chọn Vùng tham gia + tick bỏ từng cửa hàng muốn loại.
 5. Chọn nơi lưu file kết quả `.xlsx`.
 
@@ -123,7 +123,7 @@ trúc hiện tại.
    - Muốn chính xác tuyệt đối (giao thông thực tế, không phải đường chim bay), thay
      hàm `haversine_km` trong `Geo/Compute_Geo_Distance.py` bằng gọi Google Distance Matrix API khi máy
      có mạng ổn định.
-2. **Mùa vụ (Mục 4)**: DuckDB hiện chưa có bảng lịch mùa vụ theo danh mục, nên mọi mã
+2. **Mùa vụ (Mục 4)**: Dữ liệu hiện chưa có bảng lịch mùa vụ theo danh mục, nên mọi mã
    đang được coi là "Trong mùa" (không đóng băng, không giới hạn cuối mùa). Khi có
    bảng mùa vụ, bổ sung bước lọc ngay đầu `PipelineTableBuilder.build_all`.
 

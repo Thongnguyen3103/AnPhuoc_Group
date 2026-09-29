@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
-"""I/O dùng chung cho lớp Parquet: đọc bảng lookup Master, xuất Parquet phân
-mảnh theo năm/tháng."""
+"""I/O dùng chung cho lớp Parquet: đọc bảng lookup Master, đọc bảng dữ liệu bằng tên
+(A_Region, System_sales...) trực tiếp từ file Parquet, xuất Parquet phân mảnh theo năm/tháng.
+
+KHÔNG dùng file .duckdb — DuckDB chỉ chạy trong RAM làm công cụ truy vấn Parquet:
+
+    con = connect_parquet_views()                       # view A_Region, System_sales, ... -> file parquet
+    df = con.execute("SELECT * FROM A_Region").fetchdf()
+    df = read_table("D_Category")                        # hoặc đọc thẳng 1 bảng ra DataFrame
+"""
+from __future__ import annotations
+
 import os
 import duckdb
 import pandas as pd
@@ -9,6 +18,65 @@ import Get_Paths
 
 MASTER_DIR = Get_Paths.master
 PARQUET_ROOT = Get_Paths.parquet
+
+# Tên bảng -> (key đường dẫn trong Config_Paths.yaml, file/glob bên trong).
+# Bảng phân mảnh theo năm/tháng dùng glob "*/*.parquet".
+PARQUET_TABLES = {
+    "A_Region":          ("master", "A_Region.parquet"),
+    "B_Size":            ("master", "B_Size.parquet"),
+    "C_BasicSizeChart":  ("master", "C_BasicSizeChart.parquet"),
+    "D_Category":        ("master", "D_Category.parquet"),
+    "E_T-Shirt":         ("master", "E_T-Shirt.parquet"),
+    "F_DataTracking":    ("master", "F_DataTracking.parquet"),
+    "HDD_QLKD_Tong_hop": ("master", "HDD_QLKD_Tong_hop.parquet"),
+    "System_sales":      ("ban_le", "*/*.parquet"),
+    "Contract_sales":    ("ban_hop_dong", "*/*.parquet"),
+    "Inventory":         ("ton_kho_parquet", "Inventory.parquet"),
+    "InventorySize":     ("ton_kho_parquet", "InventorySize.parquet"),
+    "NhapTuSX":          ("nhap_sx_parquet", "*/*.parquet"),
+    "KhoXuat_CH":        ("kho_xuat_ch_parquet", "*/*.parquet"),
+    "HH_LuanChuyen":     ("lenh_hhlc", "*/*.parquet"),
+    "History_LC":        ("lich_su_lc", "*/*.parquet"),
+    "TraKho":            ("tra_kho", "*/*.parquet"),
+    "Revenue":           ("doanh_thu_parquet", "Revenue.parquet"),
+    "Target":            ("doanh_thu_parquet", "Target.parquet"),
+    "Bill_sales":        ("doanh_thu_parquet", "Bill_sales.parquet"),
+}
+
+
+def table_path(name: str, data_root: str | None = None) -> str:
+    """Đường dẫn (có thể là glob) tới file parquet của bảng `name`.
+    data_root: gốc kho dữ liệu khác mặc định (00.Data_AnPhuoc_Group) — None = theo Config_Paths.yaml."""
+    key, pattern = PARQUET_TABLES[name]
+    base = Get_Paths.lay(key)
+    if data_root and os.path.normcase(os.path.normpath(data_root)) != os.path.normcase(Get_Paths.DATA_ROOT):
+        base = os.path.join(os.path.normpath(data_root), os.path.relpath(base, Get_Paths.DATA_ROOT))
+    return os.path.join(base, pattern)
+
+
+def connect_parquet_views(tables=None, data_root: str | None = None) -> duckdb.DuckDBPyConnection:
+    """Kết nối DuckDB trong RAM, tạo sẵn VIEW cho từng bảng trỏ thẳng tới file parquet
+    (union_by_name: các file tháng lệch cột vẫn gộp được). Bảng thiếu file thì bỏ qua."""
+    con = duckdb.connect()
+    for name in (tables or PARQUET_TABLES):
+        path = table_path(name, data_root)
+        if "*" not in path and not os.path.exists(path):
+            continue
+        src = path.replace("'", "''")
+        try:
+            con.execute(f"""CREATE VIEW "{name}" AS SELECT * FROM read_parquet('{src}', union_by_name=true)""")
+        except duckdb.IOException:
+            pass  # glob không khớp file nào
+    return con
+
+
+def read_table(name: str, data_root: str | None = None) -> pd.DataFrame:
+    """Đọc trọn 1 bảng parquet ra DataFrame."""
+    con = connect_parquet_views([name], data_root)
+    try:
+        return con.execute(f'SELECT * FROM "{name}"').fetchdf()
+    finally:
+        con.close()
 
 
 def load_master_table(name: str) -> pd.DataFrame:

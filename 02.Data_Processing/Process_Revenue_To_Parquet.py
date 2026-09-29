@@ -1,3 +1,6 @@
+"""Doanh thu theo ngày + chỉ tiêu + số bill -> Parquet (03.Data_Parquest/10.Revenue):
+  Revenue.parquet, Target.parquet, Bill_sales.parquet
+Dùng bởi 03.Projects/Report_QLKD_Weekly. Không dùng file .duckdb."""
 import os
 import re
 import sys
@@ -12,9 +15,20 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "00.Shared"))  # 00.Shared (Get_Paths...)
 import Get_Paths
+from Read_Write_Parquet import read_table
 
-DATABASE_PATH = Get_Paths.duckdb_report_ap
-DATABASE_AP_PATH = Get_Paths.duckdb_database_ap
+REVENUE_DIR = Get_Paths.doanh_thu_parquet          # 03.Data_Parquest/10.Revenue
+
+
+def save_parquet(df: pd.DataFrame, file_name: str) -> str:
+    """Ghi df ra REVENUE_DIR/<file_name> (qua DuckDB trong RAM — giữ đúng kiểu cột như bản DuckDB cũ)."""
+    os.makedirs(REVENUE_DIR, exist_ok=True)
+    path = os.path.join(REVENUE_DIR, file_name)
+    con = duckdb.connect()
+    con.register("_df", df)
+    con.execute(f"COPY (SELECT * FROM _df) TO '{path}' (FORMAT PARQUET)")
+    con.close()
+    return path
 
 def robust_read_csv(path: str) -> pd.DataFrame:
     encodings_try = ["utf-8-sig", "utf-8", "cp1258", "cp1252", "latin1", "utf-16", "utf-16-le", "utf-16-be"]
@@ -61,13 +75,8 @@ def parse_date(series: pd.Series, fmt: str) -> pd.Series:
 
 @functools.lru_cache(maxsize=1)
 def load_a_region_mapper() -> dict:
-    if not os.path.exists(DATABASE_AP_PATH):
-        print(f"\nWarning: DuckDB file not found at {DATABASE_AP_PATH}")
-        return {}
-
     try:
-        with duckdb.connect(DATABASE_AP_PATH, read_only=True) as con:
-            a_region = con.execute('SELECT * FROM "A_Region"').df().fillna("").astype(str)
+        a_region = read_table("A_Region").fillna("").astype(str)          # 02.Master/A_Region.parquet
         for col in a_region.columns:
             a_region[col] = a_region[col].str.strip().str.replace(r'\s+', ' ', regex=True)
             
@@ -160,12 +169,8 @@ def map_regions(df: pd.DataFrame, code_col: str, name_col: str = None, default_r
 
 @functools.lru_cache(maxsize=1)
 def load_d_category() -> pd.DataFrame:
-    if not os.path.exists(DATABASE_AP_PATH):
-        print(f"\nWarning: DuckDB file not found at {DATABASE_AP_PATH}")
-        return pd.DataFrame()
     try:
-        with duckdb.connect(DATABASE_AP_PATH, read_only=True) as con:
-            df = con.execute('SELECT * FROM "D_Category"').df()
+        df = read_table("D_Category")                                   # 02.Master/D_Category.parquet
         df['Short_name'] = df['Short_name'].astype(str).str.strip()
         return df[['Short_name', 'Brand', 'Product_type']]
     except Exception as e:
@@ -319,10 +324,8 @@ def process_sales_data():
         df_out = df_out.reindex(columns=cols_order)
         df_out.sort_values(by=['Ngày', 'Store_code'], inplace=True)
         
-        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-        with duckdb.connect(DATABASE_PATH) as conn:
-            conn.execute("CREATE OR REPLACE TABLE revenue AS SELECT * FROM df_out")
-        print(f"  Saved daily sales data to database table 'revenue' in: {DATABASE_PATH} (Rows: {len(df_out)})")
+        path = save_parquet(df_out, "Revenue.parquet")
+        print(f"  Saved daily sales data to: {path} (Rows: {len(df_out)})")
     else:
         print("  No daily sales records were processed!")
 
@@ -400,10 +403,8 @@ def process_target_data():
         df_target = df_target.reindex(columns=cols)
         df_target.sort_values(by=['Tháng', 'Store_code'], inplace=True)
         
-        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-        with duckdb.connect(DATABASE_PATH) as conn:
-            conn.execute("CREATE OR REPLACE TABLE target AS SELECT * FROM df_target")
-        print(f"  Saved targets data to database table 'target' in: {DATABASE_PATH} (Rows: {len(df_target)})")
+        path = save_parquet(df_target, "Target.parquet")
+        print(f"  Saved targets data to: {path} (Rows: {len(df_target)})")
     else:
         print("  No target records were processed!")
 
@@ -525,10 +526,8 @@ def process_sales_details():
         
     grouped.sort_values(by=['Ngày', 'Store_code'], inplace=True)
     
-    os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-    with duckdb.connect(DATABASE_PATH) as conn:
-        conn.execute("CREATE OR REPLACE TABLE bill_sales AS SELECT * FROM grouped")
-    print(f"  Saved consolidated sales details to database table 'bill_sales' in: {DATABASE_PATH} (Rows: {len(grouped)})")
+    path = save_parquet(grouped, "Bill_sales.parquet")
+    print(f"  Saved consolidated sales details to: {path} (Rows: {len(grouped)})")
 
 if __name__ == "__main__":
     process_sales_data()

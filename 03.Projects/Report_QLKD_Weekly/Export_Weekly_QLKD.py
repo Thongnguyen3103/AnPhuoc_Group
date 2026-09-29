@@ -4,7 +4,6 @@ import io
 import pandas as pd
 import datetime
 import calendar
-import duckdb
 
 # Force stdout/stderr to use UTF-8 to prevent charmap/unicode encode errors on Windows terminal
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
@@ -13,8 +12,8 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='ignor
 # Define database and output paths
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "00.Shared"))  # 00.Shared (Get_Paths...)
 import Get_Paths  # noqa: E402
+from Read_Write_Parquet import read_table  # noqa: E402
 
-DATABASE_PATH = Get_Paths.duckdb_report_ap            # tao boi 02.Data_Processing/Process_Revenue_To_DuckDB.py
 OUTPUT_DIR = Get_Paths.thu_muc_ket_qua("Report_QLKD_Weekly")   # 04.Output/Report_QLKD_Weekly
 
 # The columns of Database (Aggregated weekly/monthly metrics per Store-Brand)
@@ -223,7 +222,7 @@ def get_all_stores(df_rev, df_bill, df_tgt):
                 
     # Fallback scan for all unique codes in df_rev and df_bill
     all_raw_stores = set(df_rev["Store_code"].dropna().unique()).union(set(df_bill["Store_code"].dropna().unique()))
-    for sc in all_raw_stores:
+    for sc in sorted(all_raw_stores, key=str):   # sorted: thu tu dong CSV on dinh giua cac lan chay
         sc = str(sc).strip()
         if sc == "Unknown" or sc == "nan" or not sc:
             continue
@@ -457,19 +456,18 @@ def main():
     start_date, end_date = prompt_dates()
     print(f"\nKhoảng ngày chọn: {start_date} -> {end_date}")
     
-    # 1. Load DuckDB tables
-    print("Đang đọc các bảng từ database DuckDB...")
+    # 1. Doc bang Parquet (Revenue, Bill_sales, Target)
+    print("Đang đọc Revenue / Bill_sales / Target (Parquet)...")
     try:
-        conn = duckdb.connect(DATABASE_PATH)
-        df_rev = conn.execute("SELECT * FROM revenue").df()
-        df_bill = conn.execute("SELECT * FROM bill_sales").df()
-        df_tgt = conn.execute("SELECT * FROM target").df()
-        conn.close()
+        # 03.Data_Parquest/10.Revenue — tạo bởi 02.Data_Processing/Process_Revenue_To_Parquet.py
+        df_rev = read_table("Revenue")
+        df_bill = read_table("Bill_sales")
+        df_tgt = read_table("Target")
     except Exception as e:
-        print(f"Lỗi đọc database DuckDB: {e}")
+        print(f"Lỗi đọc Parquet doanh thu (đã chạy Process_Revenue_To_Parquet chưa?): {e}")
         sys.exit(1)
         
-    # 2. Build complete store list directly from DuckDB data
+    # 2. Build complete store list directly from Parquet data
     print("Đang tổng hợp danh sách tất cả cửa hàng trong hệ thống trực tiếp từ database...")
     all_stores = get_all_stores(df_rev, df_bill, df_tgt)
     print(f"Tổng số cửa hàng/thương hiệu toàn công ty: {len(all_stores)}")
