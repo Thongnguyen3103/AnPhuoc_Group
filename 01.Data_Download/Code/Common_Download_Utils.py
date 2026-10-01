@@ -113,6 +113,12 @@ def month_range(today=None):
     return to.replace(day=1), to
 
 
+def prev_month_range(today=None):
+    """Trọn tháng trước: ngày 1 -> ngày cuối tháng."""
+    to = (today or dt.date.today()).replace(day=1) - dt.timedelta(days=1)
+    return to.replace(day=1), to
+
+
 def yesterday(today=None):
     return (today or dt.date.today()) - dt.timedelta(days=1)
 

@@ -1,11 +1,12 @@
 {
   "selected": {
     "qlkd": false,
-    "ban_hang": true,
+    "ban_hang": false,
     "ban_hd": false,
+    "nx_kho": false,
     "ton_kho": true
   },
-  "reload_empty": false,
+  "reload_empty": true,
   "output_dir": "",
   "browser_language": "en-US, vi-VN, vi, en",
   "headless": true,
@@ -56,6 +57,73 @@
         "Lý do xuất",
         "Xuất bán hợp đồng"
       ]
+    ]
+  },
+  "nx_kho": {
+    "url": "/admin/BC_NX_KHO.aspx",
+    "label_kho": "Kho/Cửa hàng",
+    "reports": [
+      {
+        "name": "NSX",
+        "file_name": "NSX_{kho}_{thoigian}",
+        "kho": [
+          "Kho An Phước",
+          "Kho PIE",
+          "Kho Tổng hợp (NG-S-TL)"
+        ],
+        "selects": [
+          [
+            "Loại báo cáo",
+            "Báo cáo nhập kho"
+          ],
+          [
+            "Lý do nhập",
+            "Nhập từ sản xuất"
+          ]
+        ]
+      },
+      {
+        "name": "XCH",
+        "file_name": "XCH_{kho}_{thoigian}",
+        "kho": [
+          "Kho An Phước",
+          "Kho PIE",
+          "Kho Tổng hợp (NG-S-TL)",
+          "Kho Chi nhánh Hà Nội",
+          "Kho TB3 đồ lót"
+        ],
+        "selects": [
+          [
+            "Loại báo cáo",
+            "Báo cáo xuất kho"
+          ],
+          [
+            "Lý do xuất",
+            "Xuất cửa hàng"
+          ]
+        ]
+      },
+      {
+        "name": "TraKho",
+        "file_name": "TraKho_{kho}_{thoigian}",
+        "kho": [
+          "Kho An Phước",
+          "Kho PIE",
+          "Kho Tổng hợp (NG-S-TL)",
+          "Kho Chi nhánh Hà Nội",
+          "Kho TB3 đồ lót"
+        ],
+        "selects": [
+          [
+            "Loại báo cáo",
+            "Báo cáo nhập kho"
+          ],
+          [
+            "Lý do nhập",
+            "Nhập từ CH"
+          ]
+        ]
+      }
     ]
   },
   "ton_kho": {
@@ -121,40 +189,15 @@
     },
     "matrix": {
       "Hệ Thống cửa hàng": [
-        "Hiệu An Phước",
-        "Hiệu Pierre Cardin",
-        "Hiệu anamai",
-        "Hiệu Bonjour",
-        "Hàng thanh lý",
-        "Thanh lý Anamai Bonjour",
         "Khác"
       ],
-      "Kho An Phước": [
-        "Hiệu An Phước",
-        "Hàng thanh lý"
-      ],
-      "Kho TB3 đồ lót": [
-        "Hiệu anamai",
-        "Hiệu Bonjour",
-        "Thanh lý Anamai Bonjour"
-      ],
+      "Kho An Phước": [],
+      "Kho TB3 đồ lót": [],
       "Kho chi nhánh Hà Nội": [
-        "Hiệu An Phước",
-        "Hiệu Pierre Cardin",
-        "Hiệu anamai",
-        "Hiệu Bonjour",
-        "Hàng thanh lý",
-        "Thanh lý Anamai Bonjour",
         "Khác"
       ],
-      "Kho Tổng hợp (NG-S-TL)": [
-        "Hiệu An Phước",
-        "Hiệu Pierre Cardin",
-        "Hàng thanh lý"
-      ],
-      "Kho PIE": [
-        "Hiệu Pierre Cardin"
-      ]
+      "Kho Tổng hợp (NG-S-TL)": [],
+      "Kho PIE": []
     }
   }
 }

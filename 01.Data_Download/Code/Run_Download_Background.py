@@ -7,9 +7,11 @@ Chạy các mục báo cáo đã chọn (giao diện Open_Download_GUI.py gọi 
     python Run_Download_Background.py --jobs ban_hang --range-ban-hang 01/08/2026 31/08/2026   # tự chọn khoảng ngày
     python Run_Download_Background.py --jobs ton_kho --date-ton-kho 20/09/2026                  # tồn kho ngày khác
     python Run_Download_Background.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD + RP ngày khác
+    python Run_Download_Background.py --jobs nx_kho --range-nx-kho 01/08/2026 31/08/2026        # NSX/XCH/TraKho tháng khác
 
 Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)
       ban_hang = Baocao_BanHang      ban_hd = Baocao_BanHD      ton_kho = TonKho_<kho>_<nhóm>
+      nx_kho   = BC_NX_KHO: NSX_<kho>_<tg> (nhập SX) + XCH_<kho>_<tg> (xuất CH) + TraKho_<kho>_<tg> (nhập từ CH)
 """
 import argparse
 import datetime as dt
@@ -27,7 +29,7 @@ from Common_Download_Utils import (
 import Download_From_QLKD as site_qlkd
 import Download_From_Report as site_report
 
-ALL_JOBS = ("qlkd", "ban_hang", "ban_hd", "ton_kho")
+ALL_JOBS = ("qlkd", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
 
 
 # ----------------------------------------------------------------------------- 1 lượt tải
@@ -150,6 +152,8 @@ def main():
                     help="Khoảng ngày Bán hàng, dd/mm/yyyy (mặc định 1/tháng -> hôm qua)")
     ap.add_argument("--range-ban-hd", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày Bán HĐ, dd/mm/yyyy (mặc định 1/tháng -> hôm qua)")
+    ap.add_argument("--range-nx-kho", nargs=2, metavar=("TU", "DEN"), type=parse_date,
+                    help="Khoảng ngày NSX/XCH/TraKho, dd/mm/yyyy (mặc định trọn tháng trước)")
     args = ap.parse_args()
     setup_logging()
     threading.current_thread().name = "Main"
@@ -165,6 +169,8 @@ def main():
         report_jobs += site_report.jobs_ban_hang(args.range_ban_hang)
     if "ban_hd" in selected:
         report_jobs += site_report.jobs_ban_hd(args.range_ban_hd)
+    if "nx_kho" in selected:
+        report_jobs += site_report.jobs_nx_kho(args.range_nx_kho)
     if "qlkd" in selected:
         report_jobs += site_report.jobs_luan_chuyen(args.range_qlkd)
     skipped = []

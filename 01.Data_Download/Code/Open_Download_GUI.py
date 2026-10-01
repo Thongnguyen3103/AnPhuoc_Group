@@ -20,7 +20,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from Common_Download_Utils import (
     ACCOUNTS_FILE, EMPTY_CACHE_FILE, LOG_DIR, ROOT, SETTINGS_FILE, load_json, month_range,
-    months_back_range, save_json, yesterday,
+    months_back_range, prev_month_range, save_json, yesterday,
 )
 
 RUNNER = Path(__file__).resolve().parent / "Run_Download_Background.py"
@@ -30,6 +30,7 @@ JOB_LABELS = {
     "qlkd": "QLKD: Hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)",
     "ban_hang": "Bán hàng - BC_CTBH_Size (Baocao_BanHang_...)",
     "ban_hd": "Bán hợp đồng - BC_NXK_CH_SL (Baocao_BanHD_...)",
+    "nx_kho": "Nhập xuất kho - BC_NX_KHO (NSX_ / XCH_ / TraKho_<kho>_...)",
     "ton_kho": "Tồn kho - TimKiemHH (TonKho_<kho>_<nhóm>)",
 }
 
@@ -109,7 +110,7 @@ class App(tk.Tk):
         box.pack(fill="x")
         self.job_vars, self.job_checks, self.date_inputs, self.notes = {}, {}, {}, {}
         sel = self.settings.get("selected", {})
-        for key in ("qlkd", "ban_hang", "ban_hd", "ton_kho"):
+        for key in ("qlkd", "ban_hang", "ban_hd", "nx_kho", "ton_kho"):
             row = ttk.Frame(box)
             row.pack(anchor="w", fill="x", pady=2)
             v = tk.BooleanVar(value=sel.get(key, True))
@@ -170,6 +171,8 @@ class App(tk.Tk):
             return months_back_range(self.settings["qlkd"]["months_back"])
         if key == "ton_kho":  # hôm qua
             return (yesterday(),)
+        if key == "nx_kho":  # trọn tháng trước
+            return prev_month_range()
         return month_range()  # bán hàng, bán HĐ: 1/tháng -> hôm qua
 
     def reset_dates(self, key=None):
@@ -184,6 +187,7 @@ class App(tk.Tk):
             "qlkd": f"({len(self.settings['qlkd']['warehouses'])} kho, bấm 1 lần tải cả 2 báo cáo)",
             "ban_hang": "",
             "ban_hd": "(Báo cáo xuất kho + Xuất bán hợp đồng)",
+            "nx_kho": f"({sum(len(r['kho']) for r in self.settings['nx_kho']['reports'])} file)",
             "ton_kho": f"({n_cells} ô đang tích trong ma trận)",
         }
         for key, cb in self.job_checks.items():
@@ -191,8 +195,9 @@ class App(tk.Tk):
             self.notes[key].configure(text=notes[key])
 
     DATE_FLAGS = {"qlkd": "--range-qlkd", "ban_hang": "--range-ban-hang",
-                  "ban_hd": "--range-ban-hd", "ton_kho": "--date-ton-kho"}
-    JOB_NAMES = {"qlkd": "QLKD", "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng", "ton_kho": "Tồn kho"}
+                  "ban_hd": "--range-ban-hd", "nx_kho": "--range-nx-kho", "ton_kho": "--date-ton-kho"}
+    JOB_NAMES = {"qlkd": "QLKD", "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng",
+                 "nx_kho": "Nhập xuất kho", "ton_kho": "Tồn kho"}
 
     def date_range_args(self, jobs):
         """['--range-qlkd', 'tu', 'den', '--date-ton-kho', 'ngay', ...] theo ô ngày; báo lỗi nếu ngày sai."""

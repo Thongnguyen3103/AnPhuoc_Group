@@ -5,15 +5,18 @@ Web http://report.anphuoc.ap:8083 : đăng nhập + các báo cáo
   ban_hd      BC_NXK_CH_SL.aspx   -> Baocao_BanHD_<từ>_<đến>.csv    (mặc định 1/tháng -> hôm qua)
   ton_kho     TimKiemHH.aspx      -> TonKho_<kho>_<nhóm>.csv        (mặc định hôm qua, theo ma trận, bỏ file rỗng)
   luan_chuyen BC_LuanChuyen.aspx  -> RP_<mã kho>.csv                (kho + thời gian giống QLKD)
+  nx_kho      BC_NX_KHO.aspx      -> NSX_ / XCH_ / TraKho_<kho>_<thời gian>.csv  (mặc định trọn tháng trước)
 Khoảng ngày có thể chọn tay trên giao diện (Run_Download_Background.py truyền vào các hàm jobs_*).
 """
+import datetime as dt
+
 from selenium.common.exceptions import TimeoutException, UnexpectedAlertPresentException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from Common_Download_Utils import (
     ACCOUNTS, SETTINGS, Job, choose, dump_debug, export_csv, log, month_range,
-    months_back_range, set_dates, wait_idle, yesterday,
+    months_back_range, prev_month_range, set_dates, wait_idle, yesterday,
 )
 
 ACC = ACCOUNTS["report"]
@@ -104,6 +107,38 @@ def jobs_ton_kho(date=None):
                 return export_csv(driver, stem, delete_if_empty=True)
 
             jobs.append(Job("Tồn kho", stem, run, cacheable=True))
+    return jobs
+
+
+def _period(d_from, d_to):
+    """Tên thời gian trong file: trọn 1 tháng -> 'mm-yyyy', còn lại -> '<từ>_<đến>'."""
+    next_day = d_to + dt.timedelta(days=1)
+    if d_from.day == 1 and next_day.day == 1 and (d_from.year, d_from.month) == (d_to.year, d_to.month):
+        return d_from.strftime("%m-%Y")
+    fd = SETTINGS["file_date_format"]
+    return f"{d_from.strftime(fd)}_{d_to.strftime(fd)}"
+
+
+def jobs_nx_kho(date_range=None):
+    """BC_NX_KHO: mỗi báo cáo (NSX / XCH / TraKho) x mỗi kho = 1 lượt tải. Mặc định trọn tháng trước."""
+    cfg = SETTINGS["nx_kho"]
+    d_from, d_to = date_range or prev_month_range()
+    period = _period(d_from, d_to)
+    jobs = []
+    for rp in cfg["reports"]:
+        for kho in rp["kho"]:
+            stem = rp["file_name"].format(kho=kho, thoigian=period)
+
+            def run(driver, kho=kho, rp=rp, stem=stem):
+                open_page(driver, cfg["url"])
+                choose(driver, cfg["label_kho"], kho)
+                # Chọn Loại báo cáo trước: trang postback, ô lý do đổi thành "Lý do nhập" / "Lý do xuất"
+                for label, value in rp["selects"]:
+                    choose(driver, label, value)
+                set_dates(driver, d_from, d_to)
+                return export_csv(driver, stem)
+
+            jobs.append(Job(rp["name"], stem, run))
     return jobs
 
 
