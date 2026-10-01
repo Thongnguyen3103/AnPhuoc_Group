@@ -26,7 +26,7 @@ paths:
   nguon_hdd_report:      "${goc}/01.Source/04.HDD/2.HDD_Report"
   nguon_kho_xuat_ch:     "${goc}/01.Source/06.KhoXuat_CH"
   nguon_nhap_sx:         "${goc}/01.Source/05.NhapSX"
-  nguon_tracking_2025:   "${goc}/01.Source/07.Data_Raw/Data_Tracking_2025.xlsx"
+  nguon_tracking_2025:   "${goc}/05.Data_Csv/02.Raw/Data_Tracking_2025.xlsx"
   nguon_lich_su_lc:      "${goc}/01.Source/09.History_LC"
   nguon_tra_kho:         "${goc}/01.Source/10.TraKho"
 
@@ -60,7 +60,7 @@ paths:
   # ---- Ổ mạng / file ngoài kho dữ liệu ----
   hhlc_o_mang:           "//hovmfs01/PKD/PhanPhoi/DieuChuyen_HH_HTCH/Recode_DieuChuyen"
   phan_tich_o_mang:      "//hovmfs01/PKD/PhanPhoi/Thong.Nguyen/Analysis_data"
-  hinh_anh_san_pham:     "//hovmfs01/PKD/PhanPhoi/Thong.Nguyen/Report_BestSeller/03.Hinh_anh_sp"
+  hinh_anh_san_pham:     "/D:/AnPhuocGroup/AnPhuoc_Data/00.Data_AnPhuoc_Group/06.Data_Images"
   data_tracking_excel:   "D:/AnPhuocGroup/AnPhuoc_Report/Analysis_data/1.Processed_data/1.Data_Tracking.xlsx"
   xep_loai_cua_hang:     "X:/Hang Ni/DOANH THU DOI CHIEU NXT/2026/1. DS TONG HOP XEP LOAI CUA HANG 2026.xlsx"
   danh_muc_hang_hoa:     "X:/ANAMAI BONJOUR"
