@@ -8,9 +8,11 @@ Chạy các mục báo cáo đã chọn (giao diện Open_Download_GUI.py gọi 
     python Run_Download_Background.py --jobs ton_kho --date-ton-kho 20/09/2026                  # tồn kho ngày khác
     python Run_Download_Background.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD + RP ngày khác
     python Run_Download_Background.py --jobs nx_kho --range-nx-kho 01/08/2026 31/08/2026        # NSX/XCH/TraKho tháng khác
+    python Run_Download_Background.py --jobs qlkd_ntc --range-qlkd-ntc 01/08/2026 31/08/2026    # NTC tháng khác
 
 Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)
       ban_hang = Baocao_BanHang      ban_hd = Baocao_BanHD      ton_kho = TonKho_<kho>_<nhóm>
+      qlkd_ntc = QLKD nhập kho trung chuyển, chi tiết có mã hàng (NTC_<kho>_<tg>)
       nx_kho   = BC_NX_KHO: NSX_<kho>_<tg> (nhập SX) + XCH_<kho>_<tg> (xuất CH) + TraKho_<kho>_<tg> (nhập từ CH)
 """
 import argparse
@@ -29,7 +31,7 @@ from Common_Download_Utils import (
 import Download_From_QLKD as site_qlkd
 import Download_From_Report as site_report
 
-ALL_JOBS = ("qlkd", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
+ALL_JOBS = ("qlkd", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
 
 
 # ----------------------------------------------------------------------------- 1 lượt tải
@@ -154,6 +156,8 @@ def main():
                     help="Khoảng ngày Bán HĐ, dd/mm/yyyy (mặc định 1/tháng -> hôm qua)")
     ap.add_argument("--range-nx-kho", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày NSX/XCH/TraKho, dd/mm/yyyy (mặc định trọn tháng trước)")
+    ap.add_argument("--range-qlkd-ntc", nargs=2, metavar=("TU", "DEN"), type=parse_date,
+                    help="Khoảng ngày QLKD nhập trung chuyển, dd/mm/yyyy (mặc định trọn tháng trước)")
     args = ap.parse_args()
     setup_logging()
     threading.current_thread().name = "Main"
@@ -187,9 +191,14 @@ def main():
     t0 = time.time()
     results, lock = {}, threading.Lock()
     qlkd_thread = None
-    if "qlkd" in selected:
-        qlkd_thread = threading.Thread(target=site_qlkd.run_qlkd, args=(results, lock, args.range_qlkd),
-                                       name="QLKD")
+    if "qlkd" in selected or "qlkd_ntc" in selected:
+        def run_qlkd_site():  # cùng 1 luồng: QLKD hàng đi đường xong rồi mới tới nhập trung chuyển
+            if "qlkd" in selected:
+                site_qlkd.run_qlkd(results, lock, args.range_qlkd)
+            if "qlkd_ntc" in selected:
+                site_qlkd.run_nhap_tc(results, lock, args.range_qlkd_ntc)
+
+        qlkd_thread = threading.Thread(target=run_qlkd_site, name="QLKD")
         qlkd_thread.start()
         time.sleep(3)
     run_report_jobs(report_jobs, results, lock)
