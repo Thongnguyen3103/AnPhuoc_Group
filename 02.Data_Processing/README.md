@@ -50,6 +50,7 @@ Hai nguồn dạng "snapshot toàn bộ" — `HDDProcessor` và `InventoryProces
 | **`Process_Transfer_History.py`** | `HistoryLCProcessor` | `nguon_lich_su_lc` | `08.History_LC/` | Có cửa hàng gửi (`MaCH`) và nhận (`MaCH_N`). |
 | **`Process_Return_To_Warehouse.py`** | `TraKhoProcessor` | `nguon_tra_kho` | `09.TraKho/` | Chỉ giữ `LyDo == "Nhập cửa hàng trả kho"`; field dư gộp về cột cuối. |
 | **`Process_Transfer_Orders.py`** | `LenhLuanChuyenProcessor` | `hhlc_o_mang` (`**/*.xlsx`, ổ mạng) | `07.Lenh_HHLC/` (prefix `KQ_HHLC`) | Nguồn Excel, bỏ file tạm `~$...`, đổi tên cột qua `RENAME_MAP`. |
+| **`Process_Transit_Receipt_HN.py`** | `NhapTrungChuyenCHNHNProcessor` | `nguon_nhap_trung_chuyen_hn` (`01.Source/07.NhapTrungChuyen_CHNHN/NTC_*.xls`, tải bằng job `qlkd_ntc`) | `04.NhapTrungChuyen_CHNHN/` (prefix `NhapTrungChuyen_CHNHN`, bảng `NhapTrungChuyen_CHNHN`) | Nhập kho trung chuyển về Kho Chi nhánh Hà Nội. Kho nhận lấy từ đuôi số chứng từ (`.../KHOHN-26-NK` → `KHOHN`); kho xuất là tên trong cột "Ghi chú" → `Kho_Xuat` + mã `MaCH_XUAT` theo `A_Region` (kho không có mã thì để trống). Không có Size/Operation; giữ `Don_gia`, `Tri_gia`. |
 
 Output Parquet nằm dưới `03.Data_Parquest/` (key `parquet`).
 

@@ -26,6 +26,7 @@ PARQUET_TABLES = {
     "Inventory":         ("ton_kho_parquet", "Inventory.parquet"),
     "InventorySize":     ("ton_kho_parquet", "InventorySize.parquet"),
     "NhapTuSX":          ("nhap_sx_parquet", "*/*.parquet"),
+    "NhapTrungChuyen_CHNHN": ("nhap_trung_chuyen_hn_parquet", "*/*.parquet"),
     "KhoXuat_CH":        ("kho_xuat_ch_parquet", "*/*.parquet"),
     "HH_LuanChuyen":     ("lenh_hhlc", "*/*.parquet"),
     "History_LC":        ("lich_su_lc", "*/*.parquet"),

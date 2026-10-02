@@ -13,6 +13,7 @@ from Sources.Process_Production_Receipt import NhapTuSXProcessor
 from Sources.Process_Transfer_History import HistoryLCProcessor
 from Sources.Process_Return_To_Warehouse import TraKhoProcessor
 from Sources.Process_Transfer_Orders import LenhLuanChuyenProcessor
+from Sources.Process_Transit_Receipt_HN import NhapTrungChuyenCHNHNProcessor
 from Convert_Xls_To_Xlsx import ExcelFormatConverter, FOLDER_HDD_QLKD
 
 
@@ -73,6 +74,10 @@ def run_lenh_luan_chuyen():
     timed("LỆNH ĐIỀU CHUYỂN — HH_LuanChuyen", LenhLuanChuyenProcessor().run)
 
 
+def run_nhap_trung_chuyen_hn():
+    timed("NHẬP TRUNG CHUYỂN CN HÀ NỘI — NhapTrungChuyen_CHNHN", NhapTrungChuyenCHNHNProcessor().run)
+
+
 def run_all():
     run_master_refresh()
     run_hdd_ton()
@@ -84,6 +89,7 @@ def run_all():
     run_history_lc()
     run_tra_kho()
     run_lenh_luan_chuyen()
+    run_nhap_trung_chuyen_hn()
 
 
 # ──────────────────────────────────────────────────────────
@@ -100,6 +106,7 @@ MENU = [
     ("Lịch sử Luân chuyển (History_LC)",              run_history_lc),
     ("Trả Kho           (TraKho)",                    run_tra_kho),
     ("Lệnh Điều chuyển  (HH_LuanChuyen)",             run_lenh_luan_chuyen),
+    ("Nhập Trung chuyển CN Hà Nội (NhapTrungChuyen_CHNHN)", run_nhap_trung_chuyen_hn),
     ("Tất cả",                                        run_all),
 ]
 
@@ -110,7 +117,8 @@ IDX_NHAP_SX    = 5
 IDX_HISTORY_LC = 6
 IDX_TRA_KHO    = 7
 IDX_LENH_DC    = 8
-IDX_ALL        = 9
+IDX_NTC_HN     = 9
+IDX_ALL        = 10
 
 
 # ──────────────────────────────────────────────────────────
@@ -215,6 +223,9 @@ def execute(indices: list) -> None:
 
         if IDX_LENH_DC in idx_set:
             run_lenh_luan_chuyen()
+
+        if IDX_NTC_HN in idx_set:
+            run_nhap_trung_chuyen_hn()
 
     labels = ", ".join(MENU[i][0].split("(")[0].strip() for i in indices)
     print(f"\n{'=' * 62}")

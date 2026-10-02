@@ -29,6 +29,7 @@ paths:
   nguon_tracking_2025:   "${goc}/05.Data_Csv/02.Raw/Data_Tracking_2025.xlsx"
   nguon_lich_su_lc:      "${goc}/01.Source/09.History_LC"
   nguon_tra_kho:         "${goc}/01.Source/10.TraKho"
+  nguon_nhap_trung_chuyen_hn: "${goc}/01.Source/07.NhapTrungChuyen_CHNHN"   # NTC_<kho>_<MM-YYYY>.xls
 
   # ---- 02.Master: bảng danh mục ----
   master:                "${goc}/02.Master"
@@ -41,6 +42,7 @@ paths:
   ban_hop_dong:          "${goc}/03.Data_Parquest/02.Contract_sales"
   ton_kho_parquet:       "${goc}/03.Data_Parquest/03.Inventory"
   ton_kho_size:          "${goc}/03.Data_Parquest/03.Inventory/InventorySize.parquet"
+  nhap_trung_chuyen_hn_parquet: "${goc}/03.Data_Parquest/04.NhapTrungChuyen_CHNHN"
   lenh_hhlc:             "${goc}/03.Data_Parquest/07.Lenh_HHLC"
   lich_su_lc:            "${goc}/03.Data_Parquest/08.History_LC"
   tra_kho:               "${goc}/03.Data_Parquest/09.TraKho"
