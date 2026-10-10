@@ -281,7 +281,13 @@ class PipelineTableBuilder:
                     So_thang_PP_moc=so_thang_pp_moc, Trang_thai_ma=trang_thai, Lan_dieu_chuyen=lan,
                 ))
 
-                for sz in sizes_present:
+                # InventorySize chỉ có dòng size còn tồn > 0 → size đã bán hết tại CH không có
+                # trong sizes_present, làm rơi số bán kỳ. Bổ sung các size có bán trong kỳ.
+                sizes_ban_ky = (sales_st.loc[sales_st.apply(lambda r: (int(r["Year"]), int(r["Month"])) in win_ky, axis=1)
+                                             & (sales_st["Qty_Ban"] != 0), "Size"].unique().tolist()
+                                if win_ky and len(sales_st) else [])
+                sizes_detail = list(sizes_present) + [s for s in sizes_ban_ky if s not in sizes_present]
+                for sz in sizes_detail:
                     ton_sz = ton_by_size_st.get(sz, 0)
                     ban3t_sz = (sales_st[(sales_st["Size"] == sz) &
                                          (sales_st.apply(lambda r: (int(r["Year"]), int(r["Month"])) in win_ky, axis=1))]["Qty_Ban"].sum()
