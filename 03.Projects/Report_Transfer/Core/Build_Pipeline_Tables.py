@@ -53,8 +53,8 @@ class PipelineTableBuilder:
 
         "Kỳ đánh giá" (Mục 2: "chu kỳ 3 tháng GIỮA HAI LẦN điều chuyển"): Lần 1 là lần
         đầu tiên, không có "lần trước" để tính khoảng giữa — nên kỳ của Lần 1 là TOÀN BỘ
-        cửa sổ mốc (6T/9T/12T theo Nhóm KHPP). Lần 2/3 mới đúng là 3 tháng cuối khung
-        (khoảng cách kể từ mốc lần trước).
+        cửa sổ mốc (6T/9T/12T theo Nhóm KHPP). Lần 2/3 là 3 tháng gần nhất đã chốt
+        (cfg.EVAL_MONTHS — khoảng cách kể từ lần điều chuyển trước), KHÔNG cắt theo khung.
 
         Trả về (set tháng trong khung, set tháng trong kỳ đánh giá, số tháng khung,
         số tháng kỳ đánh giá). Nếu không parse được Dist_plan → (None, None, mốc, mốc)."""
@@ -69,7 +69,14 @@ class PipelineTableBuilder:
         elapsed = data.months_between(y, m, cfg.CURRENT_YEAR, cfg.CURRENT_MONTH)
         n_eff = max(1, min(n, elapsed if elapsed and elapsed > 0 else n))
         win = PipelineTableBuilder.month_seq(y, m, n_eff)
-        ky = win if lan == "Lan1" else (win[-3:] if len(win) >= 3 else win)
+        if lan == "Lan1":
+            ky = win
+        else:
+            # Lần 2/3: kỳ = 3 tháng GẦN NHẤT đã chốt (cfg.EVAL_MONTHS — khoảng kể từ lần
+            # điều chuyển trước, trùng "Kỳ đánh giá (3T)" in trên Dashboard). Không lấy
+            # win[-3:] vì mã chạy trễ mốc / ép Lần sẽ bị lùi về tháng cũ. Bỏ các tháng
+            # trước Dist_plan (mã chưa lên kệ) để không pha loãng tốc độ.
+            ky = [ym for ym in cfg.EVAL_MONTHS if ym >= (y, m)] or win[-3:]
         return set(win), set(ky), n_eff, len(ky)
 
     def build_all(self, combined_pks, scope_stores_df, forced_round_map=None, hieu_suat_state=None):
