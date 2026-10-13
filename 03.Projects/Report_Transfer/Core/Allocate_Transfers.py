@@ -187,7 +187,14 @@ class TransferAllocator:
             hold[(dst, sz)] += q
             moves[(src, dst, sz, "fill")] = moves.get((src, dst, sz, "fill"), 0) + q
 
-        # 3) cấp vòng tròn từng cái — size gãy (thiếu nhiều) tự được ưu tiên vì need lớn hơn
+        # 3) cấp vòng tròn từng cái — size gãy (thiếu nhiều) tự được ưu tiên vì need lớn hơn.
+        # Điểm hết hạn mức nhóm (cộng dồn các mã trước + đã cấp ở mã này) thì dừng nhận.
+        room = {}
+        for p in points:
+            r = rows_by[p]
+            nk, hm = r.get("Nhom_han_muc"), r.get("Han_muc_nhom")
+            room[p] = (hm - used_nhom.get((p, nk), 0)) if nk is not None and hm is not None and not pd.isna(hm) else float("inf")
+        got = {p: 0 for p in points}
         for sz in bo_sizes:
             cand_cache = {}
             progress = True
@@ -195,6 +202,10 @@ class TransferAllocator:
                 progress = False
                 for p in points:
                     if need.get((p, sz), 0) <= 0:
+                        continue
+                    if got[p] >= room[p]:
+                        for z_ in bo_sizes:
+                            need[(p, z_)] = 0   # hết hạn mức: không nhận thêm, không đẩy sang kho
                         continue
                     if p not in cand_cache:
                         cand = [(key, v) for key, v in supply.items() if key[1] == sz and v > 0]
@@ -206,6 +217,7 @@ class TransferAllocator:
                     move(srcs[0], p, sz)
                     pair_qty[(srcs[0], p)] = pair_qty.get((srcs[0], p), 0) + 1
                     need[(p, sz)] -= 1
+                    got[p] += 1
                     progress = True
         if unmet_out is not None:
             for (p, sz), q in need.items():

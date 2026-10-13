@@ -97,7 +97,7 @@ Thứ tự hộp thoại hiện ra:
 | `5.Tổng hợp lệnh` | Gọn: STT – CH xuất – Mã – Size – SL – Giá trị – CH nhận – vùng – loại lệnh – khoảng cách |
 | `6.Tổng hợp theo cửa hàng` | Tồn đầu kỳ / tổng xuất / tổng nhận / tồn cuối dự kiến theo từng CH |
 | `7.DX chia từ Kho` | Đề xuất chia từ kho đi CH cho phần nhu cầu chưa đủ sau điều chuyển giữa CH |
-| `8.Tồn-Chuyển-Nhận CH×Nhóm` | CH → nhóm hàng (vd "Áo Thun AP · Sọc": danh mục + thương hiệu + thuộc tính theo khóa Mục 8) → mã điều chuyển: tồn ban đầu / chuyển / nhận từ CH / nhận từ kho / tồn cuối. Cuối mỗi nhóm 2 dòng: **Total — mã điều chuyển** (xanh) và **tồn toàn CH (nguyên giá)** (vàng, mọi mã nguyên giá cùng nhóm tại CH). Cuối sheet: TỔNG CỘNG (chỉ mã điều chuyển) |
+| `8.Tồn-Chuyển-Nhận CH×Nhóm` | CH → nhóm hàng = tên sản phẩm + thuộc tính (vd "Chemise Nam Dài PIE - Màu"; Quần: "… - Form - Style") → mã điều chuyển: tồn ban đầu / chuyển / nhận từ CH / nhận từ kho / tồn cuối. Cuối mỗi nhóm 2 dòng: **Total — mã điều chuyển** (xanh) và **tồn toàn CH (nguyên giá)** (vàng, mọi mã nguyên giá cùng nhóm tại CH). Cuối sheet: TỔNG CỘNG (chỉ mã điều chuyển) |
 
 Muốn có thêm bảng "mỗi SKU 1 dòng, liệt kê các CH nhận + SL trong 1 ô" (đã làm ở bản
 trước), báo tôi — có thể thêm lại như Phần B trong Sheet 6 mà không ảnh hưởng cấu
@@ -244,3 +244,5 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parame
       thêm, nhường suất điểm bán cho CH kế tiếp; phần rút về / rút nốt ưu tiên điểm còn hạn mức.
     - CH ngoài N rút hết về N điểm (lý do "Rút về điểm bán"); vẫn áp tồn cuối 0 hoặc ≥3, mã gãy
       size, mã tồn < 3 đề xuất sale, chia từ kho.
+19. **Hạn mức nhóm chặn ngay khi cấp hàng:** điểm bán hết hạn mức (cộng dồn các mã cùng nhóm) dừng nhận ở
+    bước bù đủ size; phần thiếu do hết hạn mức không đẩy sang chia kho.

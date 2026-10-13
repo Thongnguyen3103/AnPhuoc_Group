@@ -103,11 +103,13 @@ class TransferDataLoader:
         Status = status — dòng 'tồn toàn CH (nguyên giá)' ở Sheet 8."""
         q = """
             WITH ft AS (
-                SELECT f.Combined_PK, f.Brand, c.Group_Report, f.Color_group, f.Form, f.Style
+                SELECT f.Combined_PK, f.Brand, f.System_item_name, c.Report_item_name, c.Group_Report,
+                       f.Color_group, f.Form, f.Style
                 FROM F_DataTracking f
-                LEFT JOIN (SELECT DISTINCT ON (System_item_name) System_item_name, Group_Report FROM D_Category) c
-                       USING (System_item_name))
-            SELECT i.Store_name, ft.Brand, ft.Group_Report, ft.Color_group, ft.Form, ft.Style,
+                LEFT JOIN (SELECT DISTINCT ON (System_item_name) System_item_name, Report_item_name, Group_Report
+                           FROM D_Category) c USING (System_item_name))
+            SELECT i.Store_name, ft.Brand, COALESCE(ft.Report_item_name, ft.System_item_name) AS Report_item_name,
+                   ft.Group_Report, ft.Color_group, ft.Form, ft.Style,
                    SUM(i.Qty_TonKho) AS Qty_TonKho
             FROM Inventory i JOIN ft ON ft.Combined_PK = (i.Mahang || i.Operation)
             WHERE i.Status = ?
