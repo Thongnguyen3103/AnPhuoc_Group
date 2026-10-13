@@ -67,6 +67,19 @@ class MetricRules:
             return "Bán trung bình – chậm"
         return "Bán rất chậm"
 
+    @staticmethod
+    def blended_sell_through(ban_ky, tong_ban, tong_ton):
+        """Tỷ lệ bán toàn mã (Mục 5.1) = TRỘN 2 TỶ LỆ (không trộn 2 số lượng chung mẫu số):
+        - Tỷ lệ kỳ    = bán kỳ ÷ (bán kỳ + tồn hiện tại)   — hàng đầu kỳ đã bán được bao nhiêu
+        - Tỷ lệ lũy kế = tổng bán ÷ (tổng bán + tồn hiện tại)
+        Kết quả = TRONG_SO_KY × tỷ lệ kỳ + TRONG_SO_LUY_KE × tỷ lệ lũy kế.
+        Trả về (tỷ lệ kết hợp %, tỷ lệ kỳ %, tỷ lệ lũy kế %)."""
+        mau_ky = ban_ky + tong_ton
+        mau_lk = tong_ban + tong_ton
+        tl_ky = (ban_ky / mau_ky * 100) if mau_ky else 0
+        tl_lk = (tong_ban / mau_lk * 100) if mau_lk else 0
+        return cfg.TRONG_SO_KY * tl_ky + cfg.TRONG_SO_LUY_KE * tl_lk, tl_ky, tl_lk
+
     # ---------------------------------------------------------------- Ma trận xu hướng Lần 3 (Mục 12.2)
     TREND_MATRIX = {
         ("tang", "cao"): "ĐIỂM GOM CHÍNH",
@@ -212,6 +225,35 @@ class MetricRules:
             if score > best_score:
                 best_score, best = score, window
         return best
+
+    @staticmethod
+    def group_cap_key(group_report, attrs):
+        """Khóa nhóm hạn mức Mục 8: (Group_Report, giá trị thuộc tính theo danh mục).
+        attrs: dict có Color_group / Form / Style. Chuẩn hoá hoa/thường + khoảng trắng
+        để "Cổ bo" và "Cổ Bo" là 1 nhóm."""
+        gr = str(group_report or "").strip()
+        cols = next((v for k, v in cfg.NHOM_KEY_THEO_DANH_MUC.items() if gr.lower().startswith(k.lower())),
+                    cfg.NHOM_KEY_MAC_DINH)
+        vals = tuple(" ".join(str(attrs.get(c) or "").split()).casefold() for c in cols)
+        return (gr,) + vals
+
+    @staticmethod
+    def group_cap_label(key):
+        """Nhãn hiển thị của khóa nhóm, vd 'Áo Thun · sọc'."""
+        return " · ".join(str(k) for k in key if k)
+
+    @staticmethod
+    def shift_window(window, size_seq, offset):
+        """Dịch cửa sổ size theo số bậc trên trục size_seq, kẹp trong dải (Phụ lục B)."""
+        if not window or not offset:
+            return window
+        try:
+            start = size_seq.index(window[0])
+        except ValueError:
+            return window
+        n = len(window)
+        new_start = max(0, min(start + offset, len(size_seq) - n))
+        return size_seq[new_start:new_start + n]
 
     @staticmethod
     def bo_size_chinh(size_weight_sorted_desc, threshold=cfg.BO_SIZE_CHINH_LUYKE):

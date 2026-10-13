@@ -75,6 +75,48 @@ class TransferDataLoader:
         g = df.groupby("Store_name")["Qty_Ban"].sum() / len(eval_months)
         return g.to_dict()
 
+    def load_store_group_sales(self, store_names, eval_months):
+        """Bán theo CH × (Group_Report, Color_group, Form, Style) trong eval_months, MỌI mã —
+        dùng cho hạn mức nhận theo nhóm hàng (Mục 8). Trả về tổng SL bán (chưa chia tháng)."""
+        years = sorted(set(y for y, m in eval_months))
+        ph_year = ",".join(["?"] * len(years))
+        q = f"""
+            WITH ft AS (
+                SELECT f.Combined_PK, c.Group_Report, f.Color_group, f.Form, f.Style
+                FROM F_DataTracking f
+                LEFT JOIN (SELECT DISTINCT ON (System_item_name) System_item_name, Group_Report FROM D_Category) c
+                       USING (System_item_name))
+            SELECT s.Store_name, s.Year, s.Month, ft.Group_Report, ft.Color_group, ft.Form, ft.Style,
+                   SUM(s.Qty_Ban) AS Qty_Ban
+            FROM System_sales s JOIN ft ON ft.Combined_PK = (s.MaHang || s.Operation)
+            WHERE s.Year IN ({ph_year}) AND s."Nội dung" = 'Bán'
+            GROUP BY ALL"""
+        df = self.con.execute(q, years).fetchdf()
+        months = set(eval_months)
+        df = df[[(int(y), int(m)) in months for y, m in zip(df["Year"], df["Month"])]]
+        if store_names is not None:
+            df = df[df["Store_name"].isin(store_names)]
+        return df
+
+    def load_store_group_inventory(self, store_names, status="Nguyên giá"):
+        """Tồn hiện tại theo CH × (Brand, Group_Report, Color_group, Form, Style), MỌI mã có
+        Status = status — dòng 'tồn toàn CH (nguyên giá)' ở Sheet 8."""
+        q = """
+            WITH ft AS (
+                SELECT f.Combined_PK, f.Brand, c.Group_Report, f.Color_group, f.Form, f.Style
+                FROM F_DataTracking f
+                LEFT JOIN (SELECT DISTINCT ON (System_item_name) System_item_name, Group_Report FROM D_Category) c
+                       USING (System_item_name))
+            SELECT i.Store_name, ft.Brand, ft.Group_Report, ft.Color_group, ft.Form, ft.Style,
+                   SUM(i.Qty_TonKho) AS Qty_TonKho
+            FROM Inventory i JOIN ft ON ft.Combined_PK = (i.Mahang || i.Operation)
+            WHERE i.Status = ?
+            GROUP BY ALL"""
+        df = self.con.execute(q, [status]).fetchdf()
+        if store_names is not None:
+            df = df[df["Store_name"].isin(store_names)]
+        return df
+
     def load_store_total_inventory_all_sku(self, store_names):
         """Tổng tồn hiện tại toàn CH (mọi mã hàng) — dùng cho Hạn mức nhận Mục 7.2."""
         q = "SELECT Store_name, Qty_TonKho FROM Inventory"

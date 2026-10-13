@@ -96,6 +96,8 @@ Thứ tự hộp thoại hiện ra:
 | `4.Lệnh điều chuyển chi tiết` | CH xuất → CH nhận theo từng size, khoảng cách km thật, tồn dự kiến 2 đầu sau chuyển |
 | `5.Tổng hợp lệnh` | Gọn: STT – CH xuất – Mã – Size – SL – Giá trị – CH nhận – vùng – loại lệnh – khoảng cách |
 | `6.Tổng hợp theo cửa hàng` | Tồn đầu kỳ / tổng xuất / tổng nhận / tồn cuối dự kiến theo từng CH |
+| `7.DX chia từ Kho` | Đề xuất chia từ kho đi CH cho phần nhu cầu chưa đủ sau điều chuyển giữa CH |
+| `8.Tồn-Chuyển-Nhận CH×Nhóm` | CH → nhóm hàng (vd "Áo Thun AP · Sọc": danh mục + thương hiệu + thuộc tính theo khóa Mục 8) → mã điều chuyển: tồn ban đầu / chuyển / nhận từ CH / nhận từ kho / tồn cuối. Cuối mỗi nhóm 2 dòng: **Total — mã điều chuyển** (xanh) và **tồn toàn CH (nguyên giá)** (vàng, mọi mã nguyên giá cùng nhóm tại CH). Cuối sheet: TỔNG CỘNG (chỉ mã điều chuyển) |
 
 Muốn có thêm bảng "mỗi SKU 1 dòng, liệt kê các CH nhận + SL trong 1 ô" (đã làm ở bản
 trước), báo tôi — có thể thêm lại như Phần B trong Sheet 6 mà không ảnh hưởng cấu
@@ -183,3 +185,62 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parame
    size nhỏ), Miền Tây +2/+2/+3/+4 theo loại CH (thiên size lớn), TP.HCM/Đông chuẩn.
    Cửa sổ của từng CH khi lập lệnh cũng đã thêm bậc "hồ sơ size vùng" vào chuỗi ưu
    tiên: lịch sử CH → vùng → toàn hệ thống (Mục 6.2).
+
+## 8. Cập nhật 2026-10 — sửa logic luân chuyển
+
+1. **Không còn lệnh CH xuất = CH nhận; trong cùng 1 mã, mỗi CH chỉ 1 vai trò** (nhận
+   ưu tiên hơn xuất). Sau mỗi lần chạy, log in phần "Kiểm tra lệnh" (tự chuyển, vừa
+   xuất vừa nhận, CH không rút bị xuất, xuất vượt tồn, lô tối thiểu).
+2. **Tỷ lệ bán toàn mã = 30% TỶ LỆ kỳ + 70% TỶ LỆ lũy kế** (trước đây trộn 2 số lượng
+   chung một mẫu số → Lần 2/3 bị kéo thấp). Sheet 1 thêm "Tỷ lệ Bán Kỳ", "Tỷ lệ Bán Lũy Kế".
+3. **Tốc độ bán chỉ tính số bán TRONG KHUNG Lần** (cùng khoảng với số tháng chia).
+4. **CH không rút:** nút "🛡 CH không rút" trên GUI — CH được chọn vẫn nhận, không bị
+   xuất. Lưu tại `Data/CH_khong_rut.json`. Bảo hộ tự động theo số tháng đã TẮT
+   (`BAOHO_TU_DONG = False`) vì luật cũ tính theo tuổi mã, không phải tuổi CH.
+5. **Lệnh dùng đúng cửa sổ size / size gãy ở Sheet 2** (cột "Nguồn Cửa Sổ": lịch sử CH →
+   hồ sơ vùng → toàn HT + lệch vùng Phụ lục B).
+6. **CH nhận nhiều cái/size:** nhu cầu size = tồn mục tiêu × tỷ trọng size − tồn size
+   (size gãy tối thiểu 1).
+7. **Gom chuyến:** ưu tiên CH nguồn đã có chuyến tới CH nhận nếu xa thêm ≤
+   `GOM_CHUYEN_KM_THEM` km. Sheet 4/5 có cột "Đạt Lô Tối Thiểu" (✗ tô đỏ).
+8. **Giữ 2 size LIỀN KỀ** bán tốt nhất ở CH xuất (trước là 2 size bán tốt nhất bất kỳ).
+9. **Sheet 7 "DX chia từ Kho":** phần nhu cầu CH nhận chưa đủ sau điều chuyển giữa CH
+   được chia từ Kho An Phước / Kho PIE / Kho Tổng hợp; Kho CN Hà Nội chỉ chia cho CH
+   Hà Nội (lấy trước). Danh sách kho: `KHO_CHIA_CHUNG`, `KHO_CHIA_THEO_VUNG`.
+10. **Hiệu suất kỳ không phạt CH hết hàng:** CH tồn = 0 → chia cho số tháng CÓ BÁN trong
+    kỳ (không có tồn theo tháng nên dùng tháng có bán thay tháng có hàng).
+11. **Hạn mức nhận theo nhóm hàng (chống dồn về 1 CH bán tốt nhất):** mỗi đợt, tổng SL
+    1 CH nhận của 1 nhóm (cộng mọi mã cùng nhóm) ≤ `HAN_MUC_NHOM_THANG_BAN` (1,5) × bán
+    bình quân tháng của CH ở nhóm đó (3 tháng gần nhất, mọi mã). Nhóm: Quần → Form + Style;
+    Chemise / Áo Thun / Áo Golf / khác → Color_group (`NHOM_KEY_THEO_DANH_MUC`). CH chưa
+    bán nhóm (hoặc hạn mức < suất chia) → mỗi mã nhận tối đa = suất chia. Sheet 2 có cột
+    "Nhóm Hạn Mức", "Bán TB/Tháng Nhóm", "Hạn Mức Nhận Nhóm (đợt)". (Cột "Hạn Mức Nhận"
+    cũ theo Mục 7 chỉ để tham khảo, không dùng để chặn.)
+12. **Sheet 1 tách tồn HTCH:** "Tồn HTCH (trừ HN)" và "Tồn CH Hà Nội" (Tồn HTCH = tổng 2 cột).
+13. **Lũy kế đã vượt ngưỡng Sắp hết → luôn "Sắp hết hàng"** (mã gần hết hàng có tỷ lệ bán kỳ
+    thấp vì không còn hàng để bán, không để phần trộn 30% kỳ kéo xuống).
+14. **Lần 3: số điểm gom theo lượng tồn** = tồn còn lại ÷ suất chia TB (1 bộ size), trong [1, 10].
+15. **Mã gãy size** (số size bộ chính còn hàng < 50% bộ size chính): không rải đi nhiều CH — gom
+    toàn bộ size còn lại về 1–2 CH bán các size đó tốt nhất trong kỳ (tồn ≤ 6 cái → 1 CH).
+    Lý do lệnh "Gom mã gãy size"; Sheet 1 có cột "Số Size Chính Còn Hàng", "Mã Gãy Size".
+16. **Tồn tối thiểu sau điều chuyển (mọi trạng thái mã):** mỗi CH × mã sau điều chuyển còn **0 hoặc
+    ≥ 3 cái** (`TON_TOI_THIEU_SAU_DC`). CH nhận mà vẫn < 3 → huỷ lệnh nhận; CH còn 1–2 cái (kể cả
+    CH không có lệnh) hoặc CH đã xuất mà còn < 3 size → rút nốt về CH đang giữ ≥ 3 (ưu tiên CH nhận),
+    lý do "Rút nốt tồn lẻ (<3 cái)". CH xuất 1 phần giữ lại 3 size liền kề, mỗi size 1 cái
+    (`GIU_LAI_SO_SIZE`). Chia từ kho (Sheet 7) không tạo tồn 1–2 cái. CH "Không rút" giữ nguyên.
+    Log "Kiểm tra lệnh" báo số (mã, CH) còn tồn cuối 1–2 cái nếu có.
+17. **Mã tồn phạm vi < 3 cái** (tổng mọi CH trong phạm vi): không gom đủ được → để nguyên, không ra
+    lệnh; Sheet 1 cột "Đề Xuất Sale/Thanh Lý" đánh dấu để xử lý riêng.
+18. **Chế độ GOM THEO TỒN (`CHE_DO_PHAN_BO = "GOM_THEO_TON"`, mặc định)** — 1 công thức cho mọi
+    trạng thái / mọi Lần (thay top% & ma trận Mục 9; logic cũ giữ ở chế độ "THEO_TRANG_THAI"):
+    - N điểm bán = tồn phạm vi ÷ (số size bộ chính × `GOM_CAI_MOI_SIZE`: Lần 1 = 1, Lần 2 = 1,5,
+      Lần 3 = 2 cái/size), tối thiểu 1 — số điểm phụ thuộc lượng tồn, không fix cứng. Sheet 1 cột
+      "Số Điểm Bán (N)".
+    - Chọn N CH: cờ BÁN HẾT → Hiệu suất kỳ (Lần 1: 6T; Lần 2/3: 3 tháng gần nhất, không cần file
+      Lần 2) → Hiệu suất CH → đang có hàng.
+    - Mỗi điểm nhận tới phần chia đều (tồn ÷ N) theo tỷ trọng size bộ chính, cấp VÒNG TRÒN từng cái
+      → CH top 1 không lấy quá phần chia đều.
+    - Hạn mức nhóm (1,5 tháng bán, cộng dồn các mã cùng nhóm): CH đủ hạn mức → GIỮ hàng, không nhận
+      thêm, nhường suất điểm bán cho CH kế tiếp; phần rút về / rút nốt ưu tiên điểm còn hạn mức.
+    - CH ngoài N rút hết về N điểm (lý do "Rút về điểm bán"); vẫn áp tồn cuối 0 hoặc ≥3, mã gãy
+      size, mã tồn < 3 đề xuất sale, chia từ kho.

@@ -26,10 +26,11 @@ from Output.Write_Excel_Report import ExcelReportWriter
 EMPTY_SHEET4_COLUMNS = ["Combined PK", "Ma Hang", "Operation", "Size", "CH Xuất",
                         "Region Xuất", "CH Nhận", "Region Nhận", "Loại Lệnh",
                         "Khoảng Cách (km)", "SL Chuyển", "Giá Bán", "Giá Trị Chuyển",
-                        "Tồn Xuất Trước DC", "Tồn Xuất Sau DC", "Tồn Nhận Trước DC", "Tồn Nhận Sau DC"]
+                        "Tồn Xuất Trước DC", "Tồn Xuất Sau DC", "Tồn Nhận Trước DC", "Tồn Nhận Sau DC",
+                        "Đạt Lô Tối Thiểu"]
 EMPTY_SHEET5_COLUMNS = ["STT", "CH Xuất", "Combined PK", "Ma Hang", "Size", "SL Chuyển",
                         "Giá Trị Chuyển", "CH Nhận", "Region Xuất", "Region Nhận",
-                        "Loại Lệnh", "Khoảng Cách (km)"]
+                        "Loại Lệnh", "Khoảng Cách (km)", "Đạt Lô Tối Thiểu"]
 
 
 class CancelledError(Exception):
@@ -122,6 +123,29 @@ class TransferReportRunner:
             size_seq_by_sku[pk] = MetricRules.build_size_sequence(sizes, item_name_map.get(pk), size_order_map)
         return size_weight_by_sku, size_seq_by_sku, item_name_map
 
+    def _attach_group_caps(self, df_sku, df_store, group_sales):
+        """Mục 8 — gắn khóa nhóm + bán TB tháng của CH ở nhóm + hạn mức nhận nhóm/đợt vào df_store."""
+        from Config import Config_Parameters as cfg
+        if df_store.empty:
+            return df_store
+        n_thang = len(cfg.EVAL_MONTHS) or 1
+        gs = group_sales.copy()
+        gs["Nhom_han_muc"] = [MetricRules.group_cap_key(g, dict(Color_group=c, Form=f, Style=s))
+                              for g, c, f, s in zip(gs["Group_Report"], gs["Color_group"], gs["Form"], gs["Style"])]
+        ban_tb = (gs.groupby(["Store_name", "Nhom_han_muc"])["Qty_Ban"].sum() / n_thang).to_dict()
+        sku_key = {r["Combined_PK"]: MetricRules.group_cap_key(
+                       r.get("Group_Report"), dict(Color_group=r.get("Group_color"), Form=r.get("Form"), Style=r.get("Style")))
+                   for _, r in df_sku.iterrows()}
+        df_store = df_store.copy()
+        df_store["Nhom_han_muc"] = df_store["Combined_PK"].map(sku_key)
+        df_store["Ban_TB_nhom"] = [round(ban_tb.get((s, k), 0), 1) for s, k in zip(df_store["Store_name"], df_store["Nhom_han_muc"])]
+        df_store["Han_muc_nhom"] = [round(b * cfg.HAN_MUC_NHOM_THANG_BAN) if b > 0 else None
+                                    for b in df_store["Ban_TB_nhom"]]
+        df_store["Nhom_han_muc_label"] = df_store["Nhom_han_muc"].map(MetricRules.group_cap_label)
+        self.log(f"Hạn mức nhận theo nhóm hàng: {df_store['Nhom_han_muc'].nunique()} nhóm, "
+                 f"tối đa {cfg.HAN_MUC_NHOM_THANG_BAN} tháng bán / CH / đợt.")
+        return df_store
+
     @staticmethod
     def _build_display_sheets(df_sku, df_store, df_store_size, detail_df, inv_by_size, store_meta, scope_stores_df):
         ma_op_map = df_sku.set_index("Combined_PK").apply(lambda r: (r["Ma_Hang"], r["Operation"]), axis=1).to_dict()
@@ -163,17 +187,55 @@ class TransferReportRunner:
             self._check_cancel()
 
             inv_by_size = loader.load_inventory_size(combined_pks, scope_stores_df["Store_name"].tolist())
+            from Config import Config_Parameters as cfg
+            group_sales = loader.load_store_group_sales(scope_stores_df["Store_name"].tolist(), cfg.EVAL_MONTHS)
+            group_inv = loader.load_store_group_inventory(scope_stores_df["Store_name"].tolist())
+            inv_kho = loader.load_inventory_size(
+                combined_pks, list(cfg.KHO_CHIA_CHUNG) + list(cfg.KHO_CHIA_THEO_VUNG.keys()))
             size_weight_by_sku, size_seq_by_sku, item_name_map = self._build_size_maps(loader, combined_pks, df_sku, df_size)
             self._check_cancel()
         finally:
             loader.close()
 
+        # CH chọn tay "Không rút" trên GUI (CH mới / không tham gia rút) — vẫn được nhận.
+        khong_rut = set(self.params.get("no_export_stores") or [])
+        if not df_store.empty:
+            df_store["Khong_rut"] = df_store["Store_name"].map(lambda s: "✓" if s in khong_rut else None)
+        if khong_rut:
+            self.log(f"CH không rút (chỉ nhận): {len(khong_rut)} cửa hàng.")
+
+        df_store = self._attach_group_caps(df_sku, df_store, group_sales)
+
         self.log("Đang lập lệnh điều chuyển...")
+        unmet_rows = []
         detail_df = TransferAllocator.build_transfer_orders(
             df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
-            so_ch_pham_vi, item_name_map, store_meta)
+            so_ch_pham_vi, item_name_map, store_meta, unmet_out=unmet_rows,
+            store_size_sales=(df_store_size.groupby(["Combined_PK", "Store_name", "Size"])["Ban_3T"].sum().to_dict()
+                              if not df_store_size.empty else {}))
         detail_df = TransferAllocator.apply_batch_minimum(detail_df)
         self.log(f"Đã sinh {len(detail_df)} dòng lệnh chi tiết.")
+        sk = TransferAllocator.last_skipped_cap
+        if sk:
+            self.log(f"  Hạn mức nhóm: {len(sk)} (CH, nhóm) đã đủ hạn mức → nhường {sum(sk.values())} lượt điểm bán cho CH kế tiếp.")
+        warns = TransferAllocator.validate_orders(detail_df, df_store, inv_by_size)
+        for w in warns:
+            self.log(f"  ⚠ Kiểm tra lệnh: {w}")
+        if not warns:
+            self.log("  ✓ Kiểm tra lệnh: đạt mọi ràng buộc.")
+        if not detail_df.empty:
+            n_cap = detail_df[["CH_xuat", "CH_nhan"]].drop_duplicates().shape[0]
+            self.log(f"  Số chuyến (cặp CH xuất→nhận): {n_cap}")
+
+        hold_after = inv_by_size.groupby(["Combined_PK", "Store_name"])["Qty_TonKho"].sum()
+        if not detail_df.empty:
+            hold_after = (hold_after
+                          .sub(detail_df.groupby(["Combined_PK", "CH_xuat"])["So_luong"].sum().rename_axis(hold_after.index.names), fill_value=0)
+                          .add(detail_df.groupby(["Combined_PK", "CH_nhan"])["So_luong"].sum().rename_axis(hold_after.index.names), fill_value=0))
+        kho_df = TransferAllocator.build_warehouse_orders(pd.DataFrame(unmet_rows), inv_kho, store_meta,
+                                                          hold_after=hold_after.to_dict())
+        self.log(f"Đề xuất chia từ Kho: {int(kho_df['SL_chia'].sum()) if not kho_df.empty else 0} cái "
+                 f"/ nhu cầu còn thiếu {int(sum(u['SL_thieu'] for u in unmet_rows))} cái.")
         self._check_cancel()
 
         self.log("Đang tổng hợp các sheet đầu ra...")
@@ -191,7 +253,10 @@ class TransferReportRunner:
         self.log(f"Đang ghi file Excel: {out_name} ...")
         self._check_cancel()
         ExcelReportWriter.write_workbook(out_path, dashboard_kwargs, sheets["sheet1"], sheets["sheet2"],
-                                         sheets["sheet3"], sheets["sheet4"], sheets["sheet5"], sheets["sheet6"])
+                                         sheets["sheet3"], sheets["sheet4"], sheets["sheet5"], sheets["sheet6"],
+                                         sheet7=DisplayFormatter.to_display_sheet7(kho_df, df_sku),
+                                         sheet8=DisplayFormatter.to_display_sheet8(
+                                             OutputSummarizer.build_sheet8(df_store, detail_df, kho_df, df_sku, group_inv)))
 
         state = PerformanceStateStore.update_with_hieu_suat_ky(hieu_suat_state, df_store)
         self.state_store.save(state)

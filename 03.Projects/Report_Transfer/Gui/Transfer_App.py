@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """TransferApp — Giao diện Báo cáo Điều chuyển Hàng hoá (1 cửa sổ).
 Chọn file/tham số, bấm "Chạy Báo Cáo", xem tiến trình trong khung log, xong bấm nút mở file kết quả."""
+import json
 import os
 import queue
 import subprocess
@@ -28,6 +29,7 @@ class TransferApp:
         self._store_list = []       # [(Store_name, Region, Loai_CH)]
         self._region_vars = {}
         self._store_vars = {}
+        self._khong_rut = self._load_khong_rut()   # set Store_name: CH mới / không tham gia rút
         self._log_queue = queue.Queue()
         self._worker = None
         self._cancel_event = None
@@ -300,7 +302,18 @@ class TransferApp:
         vsb2.grid(row=0, column=1, sticky="ns")
 
         self.store_status_label = tk.Label(c5, text="⏳ Đang tải danh sách cửa hàng...", font=("Segoe UI", 8), bg=CARD, fg=LABEL)
-        self.store_status_label.pack(anchor="w", padx=12, pady=(2, 8))
+        self.store_status_label.pack(anchor="w", padx=12, pady=(2, 4))
+
+        khong_rut_row = tk.Frame(c5, bg=CARD)
+        khong_rut_row.pack(fill="x", padx=12, pady=(0, 8))
+        self.khong_rut_btn = tk.Button(khong_rut_row, text=self._khong_rut_btn_text(), font=("Segoe UI", 8, "bold"),
+                                       command=self._open_khong_rut_dialog, bg=BTN_SECONDARY, fg=TEXT,
+                                       activebackground=BTN_SECONDARY_HOVER, activeforeground=TEXT,
+                                       relief="flat", cursor="hand2", padx=8, pady=3)
+        self.khong_rut_btn.pack(side="left")
+        self._bind_hover(self.khong_rut_btn, BTN_SECONDARY, BTN_SECONDARY_HOVER)
+        tk.Label(khong_rut_row, text="CH mới / CH không tham gia rút: vẫn được NHẬN, không bị XUẤT",
+                 font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(side="left", padx=8)
 
         # 6) Hàng dưới cùng: chia làm 2 cột cho Toạ độ địa lý (trái) và Chạy báo cáo (phải) (tối giản diện tích)
         bottom_row = tk.Frame(sf, bg=BG)
@@ -506,6 +519,82 @@ class TransferApp:
         self._list_canvas.yview_moveto(0)
         self.store_status_label.config(text=f"✅ {count} cửa hàng trong phạm vi, chia theo {len(by_region)} Vùng (bỏ tick = loại khỏi đợt)")
 
+    # ---- CH không rút (CH mới / không tham gia rút) ----
+    @staticmethod
+    def _load_khong_rut():
+        try:
+            with open(paths.KHONG_RUT_FILE, "r", encoding="utf-8") as f:
+                return set(json.load(f))
+        except (OSError, ValueError):
+            return set()
+
+    def _save_khong_rut(self):
+        os.makedirs(os.path.dirname(paths.KHONG_RUT_FILE), exist_ok=True)
+        with open(paths.KHONG_RUT_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(self._khong_rut), f, ensure_ascii=False, indent=2)
+
+    def _khong_rut_btn_text(self):
+        return f"🛡  CH không rút ({len(self._khong_rut)})"
+
+    def _open_khong_rut_dialog(self):
+        if not self._store_list:
+            messagebox.showinfo("CH không rút", "Danh sách cửa hàng chưa tải xong — vui lòng đợi.")
+            return
+        win = tk.Toplevel(self.root)
+        win.title("Chọn CH không rút (CH mới / không tham gia rút)")
+        win.geometry("520x620")
+        win.configure(bg=CARD)
+        win.transient(self.root)
+        win.grab_set()
+
+        tk.Label(win, text="Tick các CH chỉ được NHẬN, không bị rút hàng trong đợt này:",
+                 font=FONT, bg=CARD, fg=TEXT).pack(anchor="w", padx=12, pady=(10, 4))
+        search_var = tk.StringVar()
+        tk.Entry(win, textvariable=search_var, font=FONT, bg=ENTRY_BG, fg=TEXT, insertbackground=TEXT,
+                 relief="flat").pack(fill="x", padx=12, pady=(0, 6), ipady=3)
+
+        frame = tk.Frame(win, bg=ENTRY_BG)
+        frame.pack(fill="both", expand=True, padx=12, pady=4)
+        canvas = tk.Canvas(frame, bg=ENTRY_BG, highlightthickness=0)
+        vsb = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview, style="TScrollbar")
+        inner = tk.Frame(canvas, bg=ENTRY_BG)
+        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        canvas.configure(yscrollcommand=vsb.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        vars_ = {name: tk.BooleanVar(value=name in self._khong_rut) for name, _r, _l in self._store_list}
+        rows = []
+        for name, region, loai in sorted(self._store_list, key=lambda t: (t[1], t[0])):
+            cb = tk.Checkbutton(inner, text=f"{name}  [{loai}]  —  {region}", variable=vars_[name], bg=ENTRY_BG,
+                                fg=TEXT, selectcolor=CARD, activebackground=ENTRY_BG, activeforeground=TEXT,
+                                font=("Segoe UI", 8), anchor="w", cursor="hand2")
+            rows.append((name, region, cb))
+
+        def _render(*_):
+            kw = search_var.get().strip().lower()
+            for _n, _r, cb in rows:
+                cb.pack_forget()
+            for n, r, cb in rows:
+                if not kw or kw in n.lower() or kw in str(r).lower():
+                    cb.pack(anchor="w", padx=6, pady=1)
+        search_var.trace_add("write", _render)
+        _render()
+
+        def _ok():
+            self._khong_rut = {n for n, v in vars_.items() if v.get()}
+            self._save_khong_rut()
+            self.khong_rut_btn.config(text=self._khong_rut_btn_text())
+            win.destroy()
+
+        btns = tk.Frame(win, bg=CARD)
+        btns.pack(fill="x", padx=12, pady=10)
+        tk.Button(btns, text="Lưu", command=_ok, bg=GREEN, fg="white", activebackground=GREEN_HOVER,
+                  relief="flat", cursor="hand2", font=FONT_BOLD, padx=16).pack(side="right")
+        tk.Button(btns, text="Bỏ chọn tất cả", command=lambda: [v.set(False) for v in vars_.values()],
+                  bg=BTN_SECONDARY, fg=TEXT, relief="flat", cursor="hand2", font=FONT, padx=10).pack(side="left")
+
     def _toggle_region(self, region, value):
         for _name, (var, r) in self._store_vars.items():
             if r == region:
@@ -562,6 +651,7 @@ class TransferApp:
             csv_path=csv_path, data_root=data_root, out_dir=out_dir,
             round_choice=round_choice, selected_regions=self._active_regions(),
             excluded_stores=excluded_stores, do_geocode=self.do_geocode_var.get(),
+            no_export_stores=sorted(self._khong_rut),
         )
 
         self.result_frame.pack_forget()

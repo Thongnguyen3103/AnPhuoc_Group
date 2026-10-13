@@ -95,6 +95,9 @@ BANHET_SO_THANG_TOI_DA = 3
 
 # Bảo hộ cửa hàng mới
 BAOHO_SO_THANG = 2
+# Bảo hộ TỰ ĐỘNG theo số tháng: TẮT — luật cũ tính theo tuổi MÃ (không phải tuổi CH) nên sai.
+# CH mới / CH không tham gia rút được chọn tay trên GUI (Data/CH_khong_rut.json).
+BAOHO_TU_DONG = False
 
 # ─────────────────────────────────────────────
 # MỤC 5.3 — Bộ size chính
@@ -143,6 +146,33 @@ XUHUONG_GIAM = 0.70
 HIEUSUAT_CAO_L3 = 1.20
 HIEUSUAT_THAP_L3 = 0.75
 GOM_DIEM_L3_MIN, GOM_DIEM_L3_MAX = 5, 10
+# Lần 3: số điểm gom = tồn còn lại tại CH ÷ suất chia TB (1 bộ size), kẹp trong [1, GOM_DIEM_L3_MAX]
+
+# ==== Mã gãy size: số size bộ chính còn hàng (tại CH phạm vi) < MA_GAY_TY_LE × số size bộ chính ====
+# → không rải; gom toàn bộ size còn lại về 1–2 CH bán các size đó tốt nhất trong kỳ.
+MA_GAY_TY_LE = 0.5
+MA_GAY_SO_CH_TOI_DA = 2
+MA_GAY_TON_1_CH = 6      # tồn còn lại ≤ ngưỡng này → chỉ gom về 1 CH
+
+# ==== Gom (Lần 3 / Sắp hết hàng): dọn tồn lẻ ở CH không phải điểm gom ====
+# Sau khi chia theo nhu cầu, CH 'rút hết' còn lại ≤ ngưỡng này (tổng mọi size của mã) → rút nốt
+# về điểm gom. CH còn nhiều hơn giữ lại để bán tiếp.
+RUT_HET_TON_LE_TOI_DA = 2
+
+# ==== Chế độ phân bổ ====
+# "GOM_THEO_TON": 1 công thức chung cho mọi trạng thái — mỗi mã giữ N điểm bán,
+#   N = tồn phạm vi ÷ (số size bộ chính × GOM_CAI_MOI_SIZE[lần]); N điểm = CH Hiệu suất kỳ cao nhất
+#   (cờ BÁN HẾT ưu tiên), được bù đủ bộ size chính & chia đều tồn; CH ngoài N rút hết về N điểm.
+#   Hạn mức nhận nhóm: CH đã nhận đủ hạn mức của nhóm bị loại khỏi N điểm của các mã sau.
+# "THEO_TRANG_THAI": logic cũ (top% / ma trận Mục 9 / gom Lần 3) — giữ để đối chiếu.
+CHE_DO_PHAN_BO = "GOM_THEO_TON"
+GOM_CAI_MOI_SIZE = {"Lan1": 1.0, "Lan2": 1.5, "Lan3": 2.0}   # số cái mỗi size bộ chính / điểm bán
+
+# ==== Tồn tối thiểu sau điều chuyển (MỌI trạng thái mã) ====
+# Mỗi CH × mã sau điều chuyển: 0 cái hoặc ≥ TON_TOI_THIEU_SAU_DC cái. CH nhận mà vẫn < ngưỡng → huỷ
+# lệnh nhận; CH còn 1..ngưỡng-1 cái → rút nốt về CH đang giữ ≥ ngưỡng (ưu tiên CH nhận).
+# CH 'Không rút' / bảo hộ không bị rút.
+TON_TOI_THIEU_SAU_DC = 3
 
 # ==== Mục 9 — Ma trận điều chuyển: ngưỡng tháng tồn ====
 MATRIX_THANG_TON_THAP = 1.5
@@ -152,8 +182,32 @@ MATRIX_THANG_TON_CAO = 3.0
 LO_TOI_THIEU_SL = 5
 LO_TOI_THIEU_GIA_TRI = 1_000_000
 
+# ==== Mục 8 — Hạn mức nhận theo NHÓM HÀNG (chống dồn hàng về 1 CH bán tốt nhất) ====
+# Mỗi đợt, tổng SL 1 CH nhận của 1 nhóm hàng (cộng mọi mã cùng nhóm) ≤ HAN_MUC_NHOM_THANG_BAN
+# × bán bình quân tháng của CH ở nhóm đó (EVAL_MONTHS, tính trên MỌI mã của nhóm).
+# CH chưa bán nhóm đó trong kỳ → mỗi mã nhận tối đa = suất chia của mã.
+# Khóa nhóm theo Group_Report (D_Category): danh mục bắt đầu bằng "Quần" → Form + Style;
+# còn lại (Chemise, Áo Thun, Áo Golf, ...) → Color_group.
+HAN_MUC_NHOM_THANG_BAN = 1.5
+NHOM_KEY_THEO_DANH_MUC = {"Quần": ["Form", "Style"]}   # tiền tố Group_Report -> cột thuộc tính
+NHOM_KEY_MAC_DINH = ["Color_group"]
+# Tên viết tắt thương hiệu hiển thị ở Sheet 8 (vd "Áo Thun AP · Sọc")
+THUONG_HIEU_VIET_TAT = {"Hiệu An Phước": "AP", "Hiệu Pierre Cardin": "PC"}
+
+# ==== Mục 7C — Gom chuyến: ưu tiên nguồn đã có chuyến tới CH nhận nếu xa thêm ≤ X km ====
+GOM_CHUYEN_KM_THEM = 30
+
+# ==== Đề xuất chia từ Kho đi CH (Sheet 7) ====
+# Kho chung: chia cho mọi vùng. Kho riêng vùng: chỉ chia cho CH thuộc vùng đó (lấy trước kho chung).
+KHO_CHIA_CHUNG = ["Kho An Phước", "Kho PIE", "Kho Tổng hợp (NG-S-TL)"]
+KHO_CHIA_THEO_VUNG = {"Kho Chi nhánh Hà Nội": "Hà Nội"}
+# CH vùng có kho riêng (Hà Nội) có được lấy thêm từ kho chung khi kho riêng hết hàng không
+KHO_RIENG_VUNG_LAY_THEM_KHO_CHUNG = True
+
 # ==== Giữ tại CH xuất khi rút hàng (Mục 8.3/8.4) ====
-GIU_LAI_SO_SIZE = 2   # 2 size liền kề bán tốt nhất, mỗi size 1 cái
+GIU_LAI_SO_SIZE = 3   # CH xuất 1 phần giữ lại 3 size liền kề (trong các size CH còn hàng), mỗi size 1 cái
+# Sau khi chuyển: CH xuất phải còn 0 hoặc ≥ GIU_LAI_SO_SIZE size (mỗi size ≥1 cái) — thiếu thì rút nốt
+# về CH nhận để không còn CH giữ tồn lẻ 1–2 cái.
 
 # Vùng kinh doanh hợp lệ (loại các dòng "Kho...", "Event", "Ban Giám đốc"...)
 VALID_STORE_REGIONS = ["TP. HCM", "Miền Tây", "Miền Trung - TN", "Miền Đông", "Hà Nội"]
