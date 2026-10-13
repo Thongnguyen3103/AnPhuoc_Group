@@ -246,3 +246,5 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parame
       size, mã tồn < 3 đề xuất sale, chia từ kho.
 19. **Hạn mức nhóm chặn ngay khi cấp hàng:** điểm bán hết hạn mức (cộng dồn các mã cùng nhóm) dừng nhận ở
     bước bù đủ size; phần thiếu do hết hạn mức không đẩy sang chia kho.
+20. **Mọi điểm bán đã đủ hạn mức khi rút về → MỞ THÊM điểm:** CH xếp hạng kế tiếp còn hạn mức và chưa xuất
+    cái nào ở mã đó trở thành điểm bán (giữ hàng đang có, nhận phần rút về) thay vì dồn vượt hạn mức.

@@ -249,10 +249,30 @@ class TransferAllocator:
 
         for (src, sz), q in moves_fill_total(moves).items():
             nhan_them[src] = nhan_them.get(src, 0) + q
+        # Mọi điểm đã đủ hạn mức → MỞ THÊM điểm: CH xếp hạng kế tiếp còn hạn mức, chưa xuất cái nào
+        # ở mã này (1 vai trò / mã); CH đó giữ lại hàng đang có (bỏ khỏi nguồn rút).
+        da_xuat = {s_ for (s_, _d, _z, _k) in moves}
+
+        def mo_them_diem(src_dang_rut):
+            for st in ranked:
+                if st in points or st in giu or st in donors or st in da_xuat or st == src_dang_rut:
+                    continue
+                if het_han_muc(st):
+                    continue
+                for key_ in [k_ for k_ in supply if k_[0] == st]:
+                    supply[key_] = 0
+                points.append(st)
+                return st
+            return None
+
         for (src, sz) in sorted(k_ for k_, v in supply.items() if v > 0):
             q = supply[(src, sz)]
             while q > 0:
-                dst = min(points, key=lambda g: (het_han_muc(g), hold[(g, sz)], dist(src, g)))
+                con_han_muc = [g for g in points if not het_han_muc(g)]
+                if not con_han_muc and mo_them_diem(src):
+                    con_han_muc = [points[-1]]
+                dst = min(con_han_muc or points, key=lambda g: (hold[(g, sz)], dist(src, g)))
+                da_xuat.add(src)
                 nhan_them[dst] = nhan_them.get(dst, 0) + 1
                 supply[(src, sz)] -= 1
                 hold[(src, sz)] -= 1
