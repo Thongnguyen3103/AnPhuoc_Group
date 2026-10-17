@@ -209,6 +209,16 @@ class TransferReportRunner:
         self.log("Đang lập lệnh điều chuyển...")
         unmet_rows = []
         from Config import Config_Parameters as cfg
+        chia_kho_truoc = bool(self.params.get("chia_kho_truoc", cfg.CHIA_KHO_TRUOC))
+        kho_names = list(cfg.KHO_CHIA_CHUNG) + list(cfg.KHO_CHIA_THEO_VUNG.keys())
+        kho_stock = None
+        if chia_kho_truoc and cfg.CHE_DO_PHAN_BO == "GOM_THEO_TON":
+            kho_stock = {"__names__": kho_names}
+            for r in inv_kho.itertuples():
+                if r.Qty_TonKho > 0:
+                    d_ = kho_stock.setdefault(r.Combined_PK, {})
+                    d_[(r.Store_name, r.Size)] = d_.get((r.Store_name, r.Size), 0) + int(r.Qty_TonKho)
+            self.log("Ưu tiên lấy hàng từ Kho: tồn kho làm nguồn bù thiếu trước khi lấy từ CH.")
         if cfg.CHE_DO_PHAN_BO == "TY_LE_BAN":
             from Core.Allocate_By_SellThrough import SellThroughAllocator
             self.log("Phương án: chia theo tỷ lệ bán (loại I 3 / II 2 / III-IV 1 cái mỗi size), tối thiểu số chuyến.")
@@ -219,13 +229,27 @@ class TransferReportRunner:
                 df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
                 so_ch_pham_vi, item_name_map, store_meta, unmet_out=unmet_rows,
                 store_size_sales=(df_store_size.groupby(["Combined_PK", "Store_name", "Size"])["Ban_3T"].sum().to_dict()
-                                  if not df_store_size.empty else {}))
+                                  if not df_store_size.empty else {}),
+                kho_stock=kho_stock)
+            if cfg.CHE_DO_PHAN_BO == "GOM_THEO_TON" and cfg.TOI_UU_SO_CHUYEN and not detail_df.empty:
+                n_truoc = detail_df[["CH_xuat", "CH_nhan"]].drop_duplicates().shape[0]
+                sl_truoc = int(detail_df["So_luong"].sum())
+                self.log("Đang tối ưu số chuyến (bài toán vận tải)...")
+                detail_df = TransferAllocator.optimize_trips(detail_df, inv_by_size, df_sku, store_meta, kho_names)
+                self.log(f"  Tối ưu chuyến: {n_truoc} → {detail_df[['CH_xuat', 'CH_nhan']].drop_duplicates().shape[0]} chuyến; "
+                         f"{sl_truoc} → {int(detail_df['So_luong'].sum())} cái.")
+        # Lệnh lấy từ kho (khi ưu tiên kho) tách sang Sheet 7, phần còn lại là điều chuyển giữa CH
+        kho_truoc_df = pd.DataFrame()
+        if not detail_df.empty and "CH_xuat" in detail_df.columns:
+            la_kho = detail_df["CH_xuat"].isin(kho_names)
+            kho_truoc_df = detail_df[la_kho].copy()
+            detail_df = detail_df[~la_kho].reset_index(drop=True)
         detail_df = TransferAllocator.apply_batch_minimum(detail_df)
         self.log(f"Đã sinh {len(detail_df)} dòng lệnh chi tiết.")
         sk = TransferAllocator.last_skipped_cap
         if sk:
             self.log(f"  Hạn mức nhóm: {len(sk)} (CH, nhóm) đã đủ hạn mức → nhường {sum(sk.values())} lượt điểm bán cho CH kế tiếp.")
-        warns = TransferAllocator.validate_orders(detail_df, df_store, inv_by_size)
+        warns = TransferAllocator.validate_orders(detail_df, df_store, inv_by_size, nhan_them=kho_truoc_df)
         for w in warns:
             self.log(f"  ⚠ Kiểm tra lệnh: {w}")
         if not warns:
@@ -239,10 +263,33 @@ class TransferReportRunner:
             hold_after = (hold_after
                           .sub(detail_df.groupby(["Combined_PK", "CH_xuat"])["So_luong"].sum().rename_axis(hold_after.index.names), fill_value=0)
                           .add(detail_df.groupby(["Combined_PK", "CH_nhan"])["So_luong"].sum().rename_axis(hold_after.index.names), fill_value=0))
-        kho_df = TransferAllocator.build_warehouse_orders(pd.DataFrame(unmet_rows), inv_kho, store_meta,
-                                                          hold_after=hold_after.to_dict())
-        self.log(f"Đề xuất chia từ Kho: {int(kho_df['SL_chia'].sum()) if not kho_df.empty else 0} cái "
-                 f"/ nhu cầu còn thiếu {int(sum(u['SL_thieu'] for u in unmet_rows))} cái.")
+        inv_kho_con = inv_kho
+        if not kho_truoc_df.empty:
+            # tồn cuối CH gồm cả hàng kho đã cấp trước; tồn kho còn lại cho phần thiếu
+            hold_after = hold_after.add(kho_truoc_df.groupby(["Combined_PK", "CH_nhan"])["So_luong"].sum()
+                                        .rename_axis(hold_after.index.names), fill_value=0)
+            da_lay = kho_truoc_df.groupby(["Combined_PK", "CH_xuat", "Size"])["So_luong"].sum()
+            inv_kho_con = inv_kho.copy()
+            inv_kho_con["Qty_TonKho"] = [q - da_lay.get((p, s, z), 0) for p, s, z, q in
+                                         zip(inv_kho_con["Combined_PK"], inv_kho_con["Store_name"], inv_kho_con["Size"], inv_kho_con["Qty_TonKho"])]
+        if chia_kho_truoc:
+            kho_df = TransferAllocator.build_warehouse_orders(pd.DataFrame(unmet_rows), inv_kho_con, store_meta,
+                                                              hold_after=hold_after.to_dict())
+        else:
+            kho_df = pd.DataFrame()   # không tích "Chia kho" → không có lệnh nào từ kho (Sheet 7 trống)
+        if not kho_truoc_df.empty:
+            kho_truoc_df = pd.DataFrame(dict(
+                Combined_PK=kho_truoc_df["Combined_PK"], Size=kho_truoc_df["Size"], Kho_xuat=kho_truoc_df["CH_xuat"],
+                CH_nhan=kho_truoc_df["CH_nhan"], Vung_nhan=kho_truoc_df["Vung_nhan"], SL_chia=kho_truoc_df["So_luong"],
+                Gia_ban=kho_truoc_df["Gia_ban"], Gia_tri=kho_truoc_df["Gia_tri"], SL_thieu_ban_dau=kho_truoc_df["So_luong"],
+                Trang_thai_ma=kho_truoc_df["Trang_thai_ma"], Lan_dieu_chuyen=kho_truoc_df["Lan_dieu_chuyen"]))
+            kho_df = pd.concat([x for x in (kho_truoc_df, kho_df) if not x.empty], ignore_index=True)
+            self.log(f"  Lấy từ Kho trước: {int(kho_truoc_df['SL_chia'].sum())} cái.")
+        if chia_kho_truoc:
+            self.log(f"Đề xuất chia từ Kho: {int(kho_df['SL_chia'].sum()) if not kho_df.empty else 0} cái "
+                     f"/ nhu cầu còn thiếu {int(sum(u['SL_thieu'] for u in unmet_rows))} cái.")
+        else:
+            self.log("Không chia kho (ô \"Chia kho\" không được tích) — Sheet 7 trống.")
         self._check_cancel()
 
         self.log("Đang tổng hợp các sheet đầu ra...")

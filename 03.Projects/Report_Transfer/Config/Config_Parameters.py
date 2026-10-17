@@ -170,6 +170,18 @@ RUT_HET_TON_LE_TOI_DA = 2
 #   đến hết tồn; lệnh = bài toán vận tải tối thiểu số chuyến (Core/Allocate_By_SellThrough.py).
 CHE_DO_PHAN_BO = "GOM_THEO_TON"
 GOM_CAI_MOI_SIZE = {"Lan1": 1.0, "Lan2": 1.5, "Lan3": 2.0}   # số cái mỗi size bộ chính / điểm bán
+# ---- Giảm số lượng luân chuyển (chế độ GOM_THEO_TON) ----
+# B2: CH ngoài N điểm bán đang có bộ hợp lệ (≥ TON_TOI_THIEU_SAU_DC cái, ≥ GIU_LAI_SO_SIZE size) được GIỮ
+#     hàng (không rút, không nhận) — nguồn giảm luân chuyển chính (~50% SL ở file Lần 1/2/3).
+GOM_GIU_CH_DU_BO = True
+# B5: sau phân bổ, lập lại lệnh theo bài toán vận tải TỐI THIỂU SỐ CHUYẾN (giữ nguyên tồn cuối từng CH) +
+#     bỏ chuyến ≤ 2 cái chỉ thêm chiều sâu (nơi nhận đã có size đó) nếu 2 đầu vẫn đạt tồn cuối 0 hoặc ≥ 3.
+TOI_UU_SO_CHUYEN = True
+TOI_UU_SO_CHUYEN_GIAY = 2        # giới hạn thời gian giải MILP / mã (giây)
+TOI_UU_BO_CHUYEN_LE_MAX = 2      # chuyến ≤ số cái này & chỉ thêm chiều sâu → bỏ
+# Chia kho (GUI: ô "Chia kho"). Bật → tồn kho làm nguồn bù thiếu TRƯỚC khi lấy từ CH, phần còn thiếu bù tiếp
+# bằng tồn kho còn lại (Sheet 7). Tắt → KHÔNG chia kho (Sheet 7 trống).
+CHIA_KHO_TRUOC = False
 TY_LE_BAN_CAI_MOI_SIZE = {"I": 3, "II": 2, "III": 1, "IV": 1}  # chế độ TY_LE_BAN: cái/size theo loại CH
 TY_LE_BAN_MILP_MAX_BIEN = 4000   # số biến chuyển tối đa / mã để giải MILP (lớn hơn → thuật toán tham lam)
 TY_LE_BAN_MILP_GIAY = 5          # giới hạn thời gian giải MILP / mã (giây)

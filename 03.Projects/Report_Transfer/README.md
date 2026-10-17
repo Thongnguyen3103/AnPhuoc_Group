@@ -254,3 +254,14 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parame
     phần còn lại rải vòng tròn cho các CH đã chia tới hết tồn. Lệnh = bài toán vận tải tối thiểu số chuyến
     (MILP scipy/HiGHS, cặp CH đã có chuyến ở mã trước rẻ hơn; bài lớn → tham lam). Mỗi CH 1 vai trò / mã, tồn cuối
     0 hoặc ≥ 3. Chưa áp hạn mức nhận nhóm, không chia kho.
+22. **Giảm số lượng luân chuyển (mặc định BẬT, chế độ GOM_THEO_TON)** — so sánh trên file Lần 1/2/3 (10/2026):
+    SL chuyển giữa CH giảm ~33–53%, số chuyến giảm ~60%, chuyến < lô tối thiểu giảm > 80%; tồn cuối vẫn 0 hoặc ≥ 3.
+    - `GOM_GIU_CH_DU_BO` (B2): CH ngoài N điểm bán đang có bộ hợp lệ (≥ 3 cái, ≥ 3 size) được giữ hàng — không
+      rút, không nhận. Đây là nguồn giảm chính. Đánh đổi: số CH giữ hàng / mã giảm chậm hơn qua các Lần.
+    - CH xuất 1 phần vẫn chừa 3 size × 1 cái hoặc xuất hết (B4, `GIU_LAI_SO_SIZE`).
+    - `TOI_UU_SO_CHUYEN` (B5): lập lại lệnh theo bài toán vận tải tối thiểu số chuyến (giữ nguyên tồn cuối từng
+      CH) + bỏ chuyến ≤ 2 cái chỉ thêm chiều sâu. Lý do lệnh: "Bù size gãy" / "Gom về điểm bán" / "Lấy từ Kho".
+    - Ô GUI **"Chia kho"** (`CHIA_KHO_TRUOC`, mặc định tắt): tích → tồn Kho An Phước / PIE / Tổng hợp (CN Hà Nội cho
+      CH Hà Nội) làm nguồn bù thiếu trước khi lấy từ CH (giảm thêm ~8–15% SL chuyển giữa CH), phần còn thiếu bù tiếp
+      từ tồn kho còn lại; lệnh kho ở Sheet 7. Không tích → KHÔNG chia kho, Sheet 7 trống.
+    - Muốn quay về logic trước đây: đặt `GOM_GIU_CH_DU_BO = False`, `TOI_UU_SO_CHUYEN = False`.

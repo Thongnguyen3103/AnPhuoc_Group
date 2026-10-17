@@ -92,7 +92,7 @@ class TransferAllocator:
 
     @staticmethod
     def _allocate_gom_theo_ton(pk, sku, stores_sku, inv_idx, size_seq, sizes_all, weight_map, store_meta,
-                               pair_qty, used_nhom, detail_rows, sku_start, unmet_out, skipped_cap):
+                               pair_qty, used_nhom, detail_rows, sku_start, unmet_out, skipped_cap, kho_stock=None):
         """GOM THEO TỒN — mọi trạng thái, mọi Lần:
         1) T = tồn mục tiêu / điểm = số size bộ chính × GOM_CAI_MOI_SIZE[lần] (≥ TON_TOI_THIEU_SAU_DC);
            N = tồn phạm vi ÷ T (≥1) — số điểm bán phụ thuộc lượng tồn, không fix cứng.
@@ -151,8 +151,29 @@ class TransferAllocator:
                 w = (weight_map.get(sz, 0) / tong_w) if tong_w else 1 / len(bo_sizes)
                 need[(p, sz)] = max(0, max(1, round(share * w)) - hold[(p, sz)])
         pset = set(points) | giu
+        if cfg.GOM_GIU_CH_DU_BO:
+            # B2: CH ngoài N đang có bộ hợp lệ (≥ ngưỡng tồn, ≥ GIU_LAI_SO_SIZE size) → GIỮ (không rút, không nhận)
+            for st in rows_by:
+                if st not in pset and st not in protected and tot[st] >= cfg.TON_TOI_THIEU_SAU_DC \
+                        and sum(1 for sz in sizes_all if hold[(st, sz)] > 0) >= cfg.GIU_LAI_SO_SIZE:
+                    pset.add(st)
+                    giu.add(st)
         supply = {(st, sz): hold[(st, sz)] for st in rows_by if st not in pset and st not in protected
                   for sz in sizes_all if hold[(st, sz)] > 0}
+        # Kho làm nguồn bù thiếu TRƯỚC (CHIA_KHO_TRUOC / ô GUI) — chỉ dùng để bù, không nhận hàng rút về
+        kho_names = set(kho_stock.get("__names__", ())) if kho_stock else set()
+        for (kho_, sz_), q_ in (kho_stock.get(pk, {}) if kho_stock else {}).items():
+            if q_ > 0:
+                supply[(kho_, sz_)] = q_
+                hold[(kho_, sz_)] = q_
+
+        def kho_duoc_chia(kho_, p_):
+            vung_kho = cfg.KHO_CHIA_THEO_VUNG.get(kho_)
+            vung_p = rows_by[p_].get("Region")
+            if vung_kho is not None:
+                return vung_kho == vung_p
+            rieng = [k_ for k_, v_ in cfg.KHO_CHIA_THEO_VUNG.items() if v_ == vung_p]
+            return not rieng or cfg.KHO_RIENG_VUNG_LAY_THEM_KHO_CHUNG
         # Điểm bán DƯ nhiều hơn THIẾU → làm điểm CHO: chuyển phần dư từng size (trên mục tiêu size), không
         # nhận; điểm còn lại làm điểm NHẬN. Mỗi CH 1 vai trò / mã (không vừa xuất vừa nhận).
         donors = set()
@@ -210,6 +231,9 @@ class TransferAllocator:
                     if p not in cand_cache:
                         cand = [(key, v) for key, v in supply.items() if key[1] == sz and v > 0]
                         cand_cache[p] = [c[0][0] for c in TransferAllocator._sort_with_consolidation(cand, p, store_meta, pair_qty)]
+                        if kho_names:   # kho trước (đúng vùng), rồi tới CH
+                            cand_cache[p] = ([x for x in cand_cache[p] if x in kho_names and kho_duoc_chia(x, p)]
+                                             + [x for x in cand_cache[p] if x not in kho_names])
                     srcs = [s_ for s_ in cand_cache[p] if supply.get((s_, sz), 0) > 0]
                     cand_cache[p] = srcs
                     if not srcs:
@@ -265,7 +289,7 @@ class TransferAllocator:
                 return st
             return None
 
-        for (src, sz) in sorted(k_ for k_, v in supply.items() if v > 0):
+        for (src, sz) in sorted(k_ for k_, v in supply.items() if v > 0 and k_[0] not in kho_names):
             q = supply[(src, sz)]
             while q > 0:
                 con_han_muc = [g for g in points if not het_han_muc(g)]
@@ -281,6 +305,8 @@ class TransferAllocator:
                 pair_qty[(src, dst)] = pair_qty.get((src, dst), 0) + 1
                 q -= 1
 
+        if kho_names:   # ghi lại tồn kho còn lại cho các mã sau / bước chia kho phần thiếu
+            kho_stock[pk] = {k_: v for k_, v in supply.items() if k_[0] in kho_names}
         nk_of = {st: rows_by[st].get("Nhom_han_muc") for st in points}
         for (src, dst, sz, kind), q in moves.items():
             if nk_of.get(dst) is not None:
@@ -504,7 +530,8 @@ class TransferAllocator:
 
     @staticmethod
     def build_transfer_orders(df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
-                               so_ch_pham_vi, master_lookup, store_meta, unmet_out=None, store_size_sales=None):
+                               so_ch_pham_vi, master_lookup, store_meta, unmet_out=None, store_size_sales=None,
+                               kho_stock=None):
         """Trả về detail_df — lệnh điều chuyển chi tiết theo size.
 
         Ghi chú: Pha 2 (cắt giảm khi tổng nhu cầu vượt hạn mức cộng dồn nhiều mã cùng
@@ -556,7 +583,7 @@ class TransferAllocator:
                 sizes_all = list(size_seq) + [z for z in inv_sizes.get(pk, []) if z not in set(size_seq)]
                 TransferAllocator._allocate_gom_theo_ton(
                     pk, sku, stores_sku, inv_idx, size_seq, sizes_all, weight_map, store_meta, pair_qty,
-                    used_nhom, detail_rows, sku_start, unmet_out, skipped_cap)
+                    used_nhom, detail_rows, sku_start, unmet_out, skipped_cap, kho_stock=kho_stock)
                 continue
 
             # ---- LẦN 3: gom điểm theo ma trận xu hướng (Mục 11.3/12), KHÔNG lặp lại Lần 2 ----
@@ -763,7 +790,68 @@ class TransferAllocator:
         return detail_df
 
     @staticmethod
-    def validate_orders(detail_df, df_store, inv_by_size):
+    def optimize_trips(detail_df, inv_by_size, df_sku, store_meta, kho_names=()):
+        """B5 — Lập lại lệnh từng mã theo bài toán vận tải TỐI THIỂU SỐ CHUYẾN trên chênh lệch tồn đầu → cuối
+        (tồn cuối từng CH giữ nguyên), cặp CH đã có chuyến ở mã trước rẻ hơn (gom chuyến giữa các mã). Sau đó bỏ
+        chuyến ≤ TOI_UU_BO_CHUYEN_LE_MAX cái chỉ thêm chiều sâu (nơi nhận đã có size đó) nếu 2 đầu vẫn đạt tồn
+        cuối 0 hoặc ≥ ngưỡng. Lệnh từ kho giữ nguyên."""
+        from Core.Allocate_By_SellThrough import SellThroughAllocator as SA
+        if detail_df is None or detail_df.empty:
+            return detail_df
+        kho_names = set(kho_names)
+        h0 = inv_by_size.groupby(["Combined_PK", "Store_name", "Size"])["Qty_TonKho"].sum().to_dict()
+        info = df_sku.set_index("Combined_PK")
+        rows, used = [], set()
+        for pk, g in detail_df.groupby("Combined_PK", sort=False):
+            net = {}
+            for r in g.itertuples():
+                net[(r.CH_xuat, r.Size)] = net.get((r.CH_xuat, r.Size), 0) - r.So_luong
+                net[(r.CH_nhan, r.Size)] = net.get((r.CH_nhan, r.Size), 0) + r.So_luong
+            sur = {k: -v for k, v in net.items() if v < 0}
+            dem = {k: v for k, v in net.items() if v > 0}
+            gia = g["Gia_ban"].iloc[0]
+            sku = info.loc[pk] if pk in info.index else {}
+            for s, t, z, q in SA.min_trip_orders(sur, dem, store_meta, used, time_limit=cfg.TOI_UU_SO_CHUYEN_GIAY):
+                used.add((s, t))
+                rs, rd = store_meta.get(s, {}).get("Region"), store_meta.get(t, {}).get("Region")
+                ly_do = ("Lấy từ Kho" if s in kho_names else
+                         "Bù size gãy" if h0.get((pk, t, z), 0) <= 0 else "Gom về điểm bán")
+                rows.append(dict(
+                    Combined_PK=pk, Ten_san_pham=sku.get("Ten_san_pham"), Trang_thai_ma=sku.get("Trang_thai"),
+                    CH_xuat=s, Vung_xuat=rs, CH_nhan=t, Vung_nhan=rd, Size=z, So_luong=q, Gia_ban=gia,
+                    Gia_tri=q * (gia or 0), Noi_lien_vung="Nội vùng" if rs == rd else "Liên vùng",
+                    Ly_do=ly_do, Lan_dieu_chuyen=sku.get("Lan_dieu_chuyen"),
+                ))
+        d1 = pd.DataFrame(rows)
+        if d1.empty:
+            return d1
+        # bỏ chuyến lẻ chỉ thêm chiều sâu
+        MIN = cfg.TON_TOI_THIEU_SAU_DC
+        tot = {}
+        for (p, s_, z), v in h0.items():
+            tot[(p, s_)] = tot.get((p, s_), 0) + v
+        for r in d1.itertuples():
+            tot[(r.Combined_PK, r.CH_xuat)] = tot.get((r.Combined_PK, r.CH_xuat), 0) - r.So_luong
+            tot[(r.Combined_PK, r.CH_nhan)] = tot.get((r.Combined_PK, r.CH_nhan), 0) + r.So_luong
+        by_trip = {k: g for k, g in d1.groupby(["CH_xuat", "CH_nhan"])}
+        drop = []
+        for (s_, t), lines in by_trip.items():
+            if s_ in kho_names or lines["So_luong"].sum() > cfg.TOI_UU_BO_CHUYEN_LE_MAX:
+                continue
+            if not all(h0.get((r.Combined_PK, t, r.Size), 0) > 0 for r in lines.itertuples()):
+                continue                      # có bù size gãy → giữ chuyến
+            delta = {}
+            for r in lines.itertuples():
+                delta[(r.Combined_PK, s_)] = delta.get((r.Combined_PK, s_), 0) + r.So_luong
+                delta[(r.Combined_PK, t)] = delta.get((r.Combined_PK, t), 0) - r.So_luong
+            if all((tot.get(k, 0) + dv == 0) or (tot.get(k, 0) + dv >= MIN) for k, dv in delta.items()):
+                for k, dv in delta.items():
+                    tot[k] = tot.get(k, 0) + dv
+                drop.extend(lines.index)
+        return d1.drop(index=drop).reset_index(drop=True)
+
+    @staticmethod
+    def validate_orders(detail_df, df_store, inv_by_size, nhan_them=None):
         """Kiểm tra ràng buộc lệnh sau phân bổ — trả về list cảnh báo (rỗng = đạt).
         Không chặn chạy, chỉ để ghi log."""
         if detail_df.empty:
@@ -793,6 +881,9 @@ class TransferAllocator:
         ra = detail_df.groupby(["Combined_PK", "CH_xuat"])["So_luong"].sum().rename_axis(ton.index.names)
         vao = detail_df.groupby(["Combined_PK", "CH_nhan"])["So_luong"].sum().rename_axis(ton.index.names)
         cuoi = ton.sub(ra, fill_value=0).add(vao, fill_value=0)
+        if nhan_them is not None and not nhan_them.empty:   # hàng lấy từ kho trước (Sheet 7)
+            cuoi = cuoi.add(nhan_them.groupby(["Combined_PK", "CH_nhan"])["So_luong"].sum()
+                            .rename_axis(ton.index.names), fill_value=0)
         if "Khong_rut" in df_store.columns or "Bao_ho_CH_moi" in df_store.columns:
             prot = df_store[(df_store.get("Khong_rut") == "✓") | (df_store.get("Bao_ho_CH_moi") == "✓")]
             prot_set = set(zip(prot["Combined_PK"], prot["Store_name"]))

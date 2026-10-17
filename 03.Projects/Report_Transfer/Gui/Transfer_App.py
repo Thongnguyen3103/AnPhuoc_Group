@@ -315,6 +315,14 @@ class TransferApp:
         tk.Label(khong_rut_row, text="CH mới / CH không tham gia rút: vẫn được NHẬN, không bị XUẤT",
                  font=("Segoe UI", 8), bg=CARD, fg=LABEL).pack(side="left", padx=8)
 
+        from Config import Config_Parameters as _cfg
+        self.chia_kho_var = tk.BooleanVar(value=_cfg.CHIA_KHO_TRUOC)
+        tk.Checkbutton(c5, text="Chia kho: lấy hàng từ Kho (An Phước / PIE / Tổng hợp; CN Hà Nội cho CH Hà Nội) để bù "
+                                "thiếu trước — giảm SL chuyển giữa cửa hàng. Không tích = không chia kho",
+                       variable=self.chia_kho_var, bg=CARD, fg=TEXT, selectcolor=ENTRY_BG, activebackground=CARD,
+                       activeforeground=TEXT, font=FONT, cursor="hand2", anchor="w", justify="left"
+                       ).pack(anchor="w", padx=12, pady=(0, 8))
+
         # 6) Hàng dưới cùng: chia làm 2 cột cho Toạ độ địa lý (trái) và Chạy báo cáo (phải) (tối giản diện tích)
         bottom_row = tk.Frame(sf, bg=BG)
         bottom_row.pack(fill="x", padx=14, pady=4)
@@ -652,6 +660,7 @@ class TransferApp:
             round_choice=round_choice, selected_regions=self._active_regions(),
             excluded_stores=excluded_stores, do_geocode=self.do_geocode_var.get(),
             no_export_stores=sorted(self._khong_rut),
+            chia_kho_truoc=self.chia_kho_var.get(),
         )
 
         self.result_frame.pack_forget()
