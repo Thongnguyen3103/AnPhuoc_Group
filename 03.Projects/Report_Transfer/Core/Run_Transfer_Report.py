@@ -208,11 +208,18 @@ class TransferReportRunner:
 
         self.log("Đang lập lệnh điều chuyển...")
         unmet_rows = []
-        detail_df = TransferAllocator.build_transfer_orders(
-            df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
-            so_ch_pham_vi, item_name_map, store_meta, unmet_out=unmet_rows,
-            store_size_sales=(df_store_size.groupby(["Combined_PK", "Store_name", "Size"])["Ban_3T"].sum().to_dict()
-                              if not df_store_size.empty else {}))
+        from Config import Config_Parameters as cfg
+        if cfg.CHE_DO_PHAN_BO == "TY_LE_BAN":
+            from Core.Allocate_By_SellThrough import SellThroughAllocator
+            self.log("Phương án: chia theo tỷ lệ bán (loại I 3 / II 2 / III-IV 1 cái mỗi size), tối thiểu số chuyến.")
+            detail_df = SellThroughAllocator.build_transfer_orders(
+                df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku, store_meta)
+        else:
+            detail_df = TransferAllocator.build_transfer_orders(
+                df_sku, df_store, inv_by_size, size_weight_by_sku, size_seq_by_sku,
+                so_ch_pham_vi, item_name_map, store_meta, unmet_out=unmet_rows,
+                store_size_sales=(df_store_size.groupby(["Combined_PK", "Store_name", "Size"])["Ban_3T"].sum().to_dict()
+                                  if not df_store_size.empty else {}))
         detail_df = TransferAllocator.apply_batch_minimum(detail_df)
         self.log(f"Đã sinh {len(detail_df)} dòng lệnh chi tiết.")
         sk = TransferAllocator.last_skipped_cap

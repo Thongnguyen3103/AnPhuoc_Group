@@ -165,8 +165,14 @@ RUT_HET_TON_LE_TOI_DA = 2
 #   (cờ BÁN HẾT ưu tiên), được bù đủ bộ size chính & chia đều tồn; CH ngoài N rút hết về N điểm.
 #   Hạn mức nhận nhóm: CH đã nhận đủ hạn mức của nhóm bị loại khỏi N điểm của các mã sau.
 # "THEO_TRANG_THAI": logic cũ (top% / ma trận Mục 9 / gom Lần 3) — giữ để đối chiếu.
+# "TY_LE_BAN": phương án độc lập — xếp CH theo tỷ lệ bán tại CH (bằng nhau → Store rank), chia lại toàn bộ
+#   tồn từ CH đầu xuống: loại I 3 cái/size, II 2 cái/size, III-IV 1 cái/size (đủ bộ size chính), chia
+#   đến hết tồn; lệnh = bài toán vận tải tối thiểu số chuyến (Core/Allocate_By_SellThrough.py).
 CHE_DO_PHAN_BO = "GOM_THEO_TON"
 GOM_CAI_MOI_SIZE = {"Lan1": 1.0, "Lan2": 1.5, "Lan3": 2.0}   # số cái mỗi size bộ chính / điểm bán
+TY_LE_BAN_CAI_MOI_SIZE = {"I": 3, "II": 2, "III": 1, "IV": 1}  # chế độ TY_LE_BAN: cái/size theo loại CH
+TY_LE_BAN_MILP_MAX_BIEN = 4000   # số biến chuyển tối đa / mã để giải MILP (lớn hơn → thuật toán tham lam)
+TY_LE_BAN_MILP_GIAY = 5          # giới hạn thời gian giải MILP / mã (giây)
 
 # ==== Tồn tối thiểu sau điều chuyển (MỌI trạng thái mã) ====
 # Mỗi CH × mã sau điều chuyển: 0 cái hoặc ≥ TON_TOI_THIEU_SAU_DC cái. CH nhận mà vẫn < ngưỡng → huỷ

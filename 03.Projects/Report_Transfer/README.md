@@ -248,3 +248,9 @@ Toàn bộ số liệu ở Phụ lục C nằm gọn trong `Config/Config_Parame
     bước bù đủ size; phần thiếu do hết hạn mức không đẩy sang chia kho.
 20. **Mọi điểm bán đã đủ hạn mức khi rút về → MỞ THÊM điểm:** CH xếp hạng kế tiếp còn hạn mức và chưa xuất
     cái nào ở mã đó trở thành điểm bán (giữ hàng đang có, nhận phần rút về) thay vì dồn vượt hạn mức.
+21. **Phương án độc lập "TY_LE_BAN"** (`CHE_DO_PHAN_BO = "TY_LE_BAN"`, file `Core/Allocate_By_SellThrough.py`):
+    xếp CH theo tỷ lệ bán tại CH (bằng nhau → Store rank I > II > III > IV); chia lại toàn bộ tồn của mã từ CH
+    đầu xuống — loại I 3 cái/size, II 2 cái/size, III-IV 1 cái/size, đủ bộ size chính (`TY_LE_BAN_CAI_MOI_SIZE`);
+    phần còn lại rải vòng tròn cho các CH đã chia tới hết tồn. Lệnh = bài toán vận tải tối thiểu số chuyến
+    (MILP scipy/HiGHS, cặp CH đã có chuyến ở mã trước rẻ hơn; bài lớn → tham lam). Mỗi CH 1 vai trò / mã, tồn cuối
+    0 hoặc ≥ 3. Chưa áp hạn mức nhận nhóm, không chia kho.
