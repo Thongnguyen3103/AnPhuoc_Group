@@ -36,6 +36,8 @@ desktop.ini
 **/Cache/
 **/dist/
 **/output/
+# Report_Transfer/Output la CODE (dinh dang + ghi Excel), khong phai du lieu dau ra
+!03.Projects/Report_Transfer/Output/
 **/database/
 
 # Trang thai lon / backup cu
