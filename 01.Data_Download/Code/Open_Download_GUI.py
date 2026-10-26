@@ -27,7 +27,8 @@ RUNNER = Path(__file__).resolve().parent / "Run_Download_Background.py"
 FMT = "%d/%m/%Y"
 
 JOB_LABELS = {
-    "qlkd": "QLKD: Hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)",
+    "qlkd": "QLKD: Hàng đi đường (QLKD_<kho>)",
+    "luan_chuyen": "Luân chuyển - BC_LuanChuyen (RP_<kho>)",
     "qlkd_ntc": "QLKD: Nhập kho trung chuyển, có mã hàng (NTC_<kho>_...)",
     "ban_hang": "Bán hàng - BC_CTBH_Size (Baocao_BanHang_...)",
     "ban_hd": "Bán hợp đồng - BC_NXK_CH_SL (Baocao_BanHD_...)",
@@ -111,10 +112,11 @@ class App(tk.Tk):
         box.pack(fill="x")
         self.job_vars, self.job_checks, self.date_inputs, self.notes = {}, {}, {}, {}
         sel = self.settings.get("selected", {})
-        for key in ("qlkd", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho"):
+        for key in ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho"):
             row = ttk.Frame(box)
             row.pack(anchor="w", fill="x", pady=2)
-            v = tk.BooleanVar(value=sel.get(key, True))
+            # luan_chuyen trước đây đi kèm qlkd -> chưa lưu thì lấy theo ô qlkd
+            v = tk.BooleanVar(value=sel.get(key, sel.get("qlkd", True) if key == "luan_chuyen" else True))
             cb = ttk.Checkbutton(row, variable=v, command=self.refresh_job_labels)
             cb.pack(side="left")
             self.job_vars[key], self.job_checks[key] = v, cb
@@ -133,6 +135,12 @@ class App(tk.Tk):
         ttk.Label(opt, text="Số tab web report chạy song song:").grid(row=0, column=2, sticky="e", padx=(30, 4))
         self.tabs = tk.IntVar(value=int(self.settings.get("tabs_report", 5)))
         ttk.Spinbox(opt, from_=1, to=8, width=4, textvariable=self.tabs).grid(row=0, column=3, sticky="w")
+        ttk.Label(opt, text="Thời gian chờ tối đa mỗi file (phút):").grid(row=1, column=0, sticky="w", pady=(6, 0))
+        self.timeout_min = tk.IntVar(value=max(1, int(self.settings.get("download_timeout_sec", 3600)) // 60))
+        ttk.Spinbox(opt, from_=5, to=600, increment=5, width=6,
+                    textvariable=self.timeout_min).grid(row=1, column=1, sticky="w", pady=(6, 0))
+        ttk.Label(opt, text="(quá thời gian này mà file chưa về thì báo LỖI và chuyển lượt khác)",
+                  foreground="#666").grid(row=1, column=1, columnspan=3, sticky="w", padx=(70, 0), pady=(6, 0))
 
         bar = ttk.Frame(f)
         bar.pack(fill="x", pady=8)
@@ -168,7 +176,7 @@ class App(tk.Tk):
         self.date_inputs[key] = inputs
 
     def default_dates(self, key):
-        if key == "qlkd":  # 1/tháng cách đây months_back tháng -> hôm nay (QLKD + RP)
+        if key in ("qlkd", "luan_chuyen"):  # 1/tháng cách đây months_back tháng -> hôm nay
             return months_back_range(self.settings["qlkd"]["months_back"])
         if key == "ton_kho":  # hôm qua
             return (yesterday(),)
@@ -185,7 +193,8 @@ class App(tk.Tk):
     def refresh_job_labels(self):
         n_cells = self.count_selected_cells() if hasattr(self, "cells") else 0
         notes = {
-            "qlkd": f"({len(self.settings['qlkd']['warehouses'])} kho, bấm 1 lần tải cả 2 báo cáo)",
+            "qlkd": f"({len(self.settings['qlkd']['warehouses'])} kho)",
+            "luan_chuyen": f"({len(self.settings['qlkd']['warehouses'])} kho, cùng danh sách kho QLKD)",
             "qlkd_ntc": f"({', '.join(self.settings['qlkd_ntc']['kho'])})",
             "ban_hang": "",
             "ban_hd": "(Báo cáo xuất kho + Xuất bán hợp đồng)",
@@ -196,10 +205,11 @@ class App(tk.Tk):
             cb.configure(text=JOB_LABELS[key])
             self.notes[key].configure(text=notes[key])
 
-    DATE_FLAGS = {"qlkd": "--range-qlkd", "qlkd_ntc": "--range-qlkd-ntc", "ban_hang": "--range-ban-hang",
-                  "ban_hd": "--range-ban-hd", "nx_kho": "--range-nx-kho", "ton_kho": "--date-ton-kho"}
-    JOB_NAMES = {"qlkd": "QLKD", "qlkd_ntc": "QLKD nhập trung chuyển", "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng",
-                 "nx_kho": "Nhập xuất kho", "ton_kho": "Tồn kho"}
+    DATE_FLAGS = {"qlkd": "--range-qlkd", "luan_chuyen": "--range-luan-chuyen", "qlkd_ntc": "--range-qlkd-ntc",
+                  "ban_hang": "--range-ban-hang", "ban_hd": "--range-ban-hd", "nx_kho": "--range-nx-kho",
+                  "ton_kho": "--date-ton-kho"}
+    JOB_NAMES = {"qlkd": "QLKD", "luan_chuyen": "Luân chuyển", "qlkd_ntc": "QLKD nhập trung chuyển",
+                 "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng", "nx_kho": "Nhập xuất kho", "ton_kho": "Tồn kho"}
 
     def date_range_args(self, jobs):
         """['--range-qlkd', 'tu', 'den', '--date-ton-kho', 'ngay', ...] theo ô ngày; báo lỗi nếu ngày sai."""
@@ -319,6 +329,10 @@ class App(tk.Tk):
         s["headless"] = self.headless.get()
         try:
             s["tabs_report"] = max(1, min(8, int(self.tabs.get())))
+        except (tk.TclError, ValueError):
+            pass
+        try:
+            s["download_timeout_sec"] = max(5, min(600, int(self.timeout_min.get()))) * 60
         except (tk.TclError, ValueError):
             pass
         s["ton_kho"]["matrix"] = {kho: [n for n in self.nhom_list

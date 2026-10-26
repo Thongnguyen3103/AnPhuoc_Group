@@ -6,11 +6,12 @@ Chạy các mục báo cáo đã chọn (giao diện Open_Download_GUI.py gọi 
     python Run_Download_Background.py --jobs ton_kho --reload-empty    # tải lại cả các ô tồn kho đã biết rỗng
     python Run_Download_Background.py --jobs ban_hang --range-ban-hang 01/08/2026 31/08/2026   # tự chọn khoảng ngày
     python Run_Download_Background.py --jobs ton_kho --date-ton-kho 20/09/2026                  # tồn kho ngày khác
-    python Run_Download_Background.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD + RP ngày khác
+    python Run_Download_Background.py --jobs qlkd --range-qlkd 01/04/2026 28/09/2026            # QLKD ngày khác
+    python Run_Download_Background.py --jobs luan_chuyen --range-luan-chuyen 01/04/2026 28/09/2026  # RP ngày khác
     python Run_Download_Background.py --jobs nx_kho --range-nx-kho 01/08/2026 31/08/2026        # NSX/XCH/TraKho tháng khác
     python Run_Download_Background.py --jobs qlkd_ntc --range-qlkd-ntc 01/08/2026 31/08/2026    # NTC tháng khác
 
-Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>) + Luân chuyển (RP_<kho>)
+Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>)      luan_chuyen = Luân chuyển BC_LuanChuyen (RP_<kho>)
       ban_hang = Baocao_BanHang      ban_hd = Baocao_BanHD      ton_kho = TonKho_<kho>_<nhóm>
       qlkd_ntc = QLKD nhập kho trung chuyển, chi tiết có mã hàng (NTC_<kho>_<tg>)
       nx_kho   = BC_NX_KHO: NSX_<kho>_<tg> (nhập SX) + XCH_<kho>_<tg> (xuất CH) + TraKho_<kho>_<tg> (nhập từ CH)
@@ -31,7 +32,7 @@ from Common_Download_Utils import (
 import Download_From_QLKD as site_qlkd
 import Download_From_Report as site_report
 
-ALL_JOBS = ("qlkd", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
+ALL_JOBS = ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
 
 
 # ----------------------------------------------------------------------------- 1 lượt tải
@@ -148,6 +149,8 @@ def main():
     ap.add_argument("--reload-empty", action="store_true", help="Tải lại cả các ô tồn kho đã biết rỗng")
     ap.add_argument("--range-qlkd", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày QLKD + RP, dd/mm/yyyy (mặc định 1/tháng cách đây months_back tháng -> hôm nay)")
+    ap.add_argument("--range-luan-chuyen", nargs=2, metavar=("TU", "DEN"), type=parse_date,
+                    help="Khoảng ngày Luân chuyển RP, dd/mm/yyyy (mặc định giống QLKD)")
     ap.add_argument("--date-ton-kho", metavar="NGAY", type=parse_date,
                     help="Ngày tồn kho, dd/mm/yyyy (mặc định hôm qua)")
     ap.add_argument("--range-ban-hang", nargs=2, metavar=("TU", "DEN"), type=parse_date,
@@ -162,7 +165,9 @@ def main():
     setup_logging()
     threading.current_thread().name = "Main"
 
-    selected = args.jobs or [k for k in ALL_JOBS if SETTINGS.get("selected", {}).get(k)]
+    sel_cfg = dict(SETTINGS.get("selected", {}))
+    sel_cfg.setdefault("luan_chuyen", sel_cfg.get("qlkd", False))  # Settings cũ: RP đi kèm qlkd
+    selected = args.jobs or [k for k in ALL_JOBS if sel_cfg.get(k)]
     reload_empty = args.reload_empty or SETTINGS.get("reload_empty", False)
     if not selected:
         log.error("Chưa chọn mục nào để chạy.")
@@ -175,8 +180,8 @@ def main():
         report_jobs += site_report.jobs_ban_hd(args.range_ban_hd)
     if "nx_kho" in selected:
         report_jobs += site_report.jobs_nx_kho(args.range_nx_kho)
-    if "qlkd" in selected:
-        report_jobs += site_report.jobs_luan_chuyen(args.range_qlkd)
+    if "luan_chuyen" in selected:
+        report_jobs += site_report.jobs_luan_chuyen(args.range_luan_chuyen)
     skipped = []
     if "ton_kho" in selected:
         ton = site_report.jobs_ton_kho(args.date_ton_kho)
