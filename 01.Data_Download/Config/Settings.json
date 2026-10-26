@@ -1,6 +1,7 @@
 {
   "selected": {
     "qlkd": false,
+    "luan_chuyen": false,
     "qlkd_ntc": false,
     "ban_hang": false,
     "ban_hd": false,
@@ -11,7 +12,7 @@
   "output_dir": "",
   "browser_language": "en-US, vi-VN, vi, en",
   "headless": true,
-  "tabs_report": 5,
+  "tabs_report": 3,
   "tabs_sales": 1,
   "download_timeout_sec": 3600,
   "empty_recheck_days": 7,
