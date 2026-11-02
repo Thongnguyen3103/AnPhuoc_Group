@@ -142,6 +142,11 @@ def jobs_nx_kho(date_range=None):
     return jobs
 
 
+def jobs_nx_kho_one(name, date_range=None):
+    """Chỉ 1 báo cáo của BC_NX_KHO ("NSX" / "XCH" / "TraKho") - để tích chọn từng mục riêng."""
+    return [j for j in jobs_nx_kho(date_range) if j.group == name]
+
+
 def jobs_luan_chuyen(date_range=None):
     """BC_LuanChuyen cho các kho của QLKD, cùng khoảng thời gian với QLKD."""
     q = SETTINGS["qlkd"]
