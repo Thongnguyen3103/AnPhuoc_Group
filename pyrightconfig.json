@@ -4,7 +4,7 @@
   "executionEnvironments": [
     { "root": "03.Projects/Report_LCHH",     "extraPaths": ["00.Shared", "03.Projects/Report_LCHH/Core"] },
     { "root": "03.Projects/Report_Transfer", "extraPaths": ["00.Shared", "03.Projects/Report_Transfer"] },
-    { "root": "03.Projects/Report_Summary",  "extraPaths": ["00.Shared", "03.Projects/Report_Summary/Core"] },
+    { "root": "03.Projects/Report_Summary_App", "extraPaths": ["00.Shared", "03.Projects/Report_Summary_App/Core"] },
     { "root": "02.Data_Processing",          "extraPaths": ["00.Shared", "02.Data_Processing"] },
     { "root": "01.Data_Download",            "extraPaths": ["01.Data_Download/Code"] },
     { "root": ".",                           "extraPaths": ["00.Shared"] }

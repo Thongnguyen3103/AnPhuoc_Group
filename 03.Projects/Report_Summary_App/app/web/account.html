@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tài khoản — Báo cáo Tổng hợp</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="ap-page">
+  <header class="ap-topbar">
+    <span class="ap-brand">AN PHUOC GROUP <small>Analytics</small></span>
+    <nav>
+      <a href="/" id="nav-report">📊 Báo cáo</a>
+      <a href="/admin" id="nav-admin" hidden>⚙️ Quản trị</a>
+      <button class="ap-link" type="button" id="nav-logout">Đăng xuất</button>
+    </nav>
+  </header>
+  <main class="ap-center" style="min-height: calc(100vh - 52px);">
+    <form class="ap-card" id="pw-form" novalidate>
+      <h1>Đổi mật khẩu</h1>
+      <p class="ap-sub" id="pw-sub">Tài khoản: <strong id="who">…</strong></p>
+
+      <label class="ap-label" for="current">Mật khẩu hiện tại</label>
+      <input class="ap-input" id="current" type="password" autocomplete="current-password" required>
+
+      <label class="ap-label" for="next">Mật khẩu mới</label>
+      <input class="ap-input" id="next" type="password" autocomplete="new-password" required>
+      <div class="ap-muted">Ít nhất 8 ký tự, gồm cả chữ và số.</div>
+
+      <label class="ap-label" for="confirm">Nhập lại mật khẩu mới</label>
+      <input class="ap-input" id="confirm" type="password" autocomplete="new-password" required>
+
+      <button class="ap-btn block" type="submit" id="btn-save">Lưu mật khẩu mới</button>
+      <div class="ap-msg" id="msg" role="alert"></div>
+    </form>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/account.js"></script>
+</body>
+</html>

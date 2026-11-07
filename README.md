@@ -24,7 +24,7 @@
 │   └── README.md                     chi tiết từng file
 │
 ├── 03.Projects/               Các báo cáo (chỉ ĐỌC dữ liệu đã xử lý, GHI vào 04.Output)
-│   ├── Report_LCHH/              Build_Data_LCHH.py, Build_Data_Performance.py, Export_Excel_LCHH.bat
+│   ├── Report_LCHH/              Build_Master_LC.py
 │   ├── Report_Summary/           Core/Run_Build_Summary.py    (HTML tự chứa)
 │   ├── Report_Transfer/          Open_Transfer_GUI.py         (giao diện, cấu trúc OOP)
 │   ├── Report_TopSeller/         Build_Best_Slow_Seller.py    (giao diện Best/Slow Seller)

@@ -23,15 +23,21 @@ FEMALE_SIZE_MAP = {
 }
 FEMALE_SIZE_KEYWORDS = ("Nữ", "Jupe", "Váy")
 
+# Hàng luôn là OneSize dù hệ thống có ghi size (vd dây nịt có size 100/110/120)
+ONESIZE_KEYWORDS = ("dây nịt",)
+
 
 def actual_size(system_size, report_item_name) -> str:
     """Quy đổi size hệ thống -> size thực tế theo SIZE_MAP (và FEMALE_SIZE_MAP nếu là
     hàng Nữ/Jupe/Váy). Size không khớp map (vd size quần 30-39, size giày) giữ nguyên giá trị gốc."""
+    name = str(report_item_name)
+    if any(kw in name.lower() for kw in ONESIZE_KEYWORDS):
+        return "OneSize"
+
     s = str(system_size).strip().upper()
     if s in SIZE_MAP:
         return SIZE_MAP[s]
 
-    name = str(report_item_name)
     is_female_group = any(kw in name for kw in FEMALE_SIZE_KEYWORDS)
     if is_female_group:
         if s in FEMALE_SIZE_MAP:
