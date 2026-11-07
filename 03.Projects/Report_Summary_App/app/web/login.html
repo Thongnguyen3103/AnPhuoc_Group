@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập — Báo cáo Tổng hợp</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="ap-page">
+  <main class="ap-center">
+    <form class="ap-card" id="login-form" novalidate>
+      <div class="ap-logo">AN PHUOC GROUP</div>
+      <h1>Báo cáo Tổng hợp</h1>
+      <p class="ap-sub">Tồn kho &amp; Số bán — đăng nhập để xem báo cáo</p>
+
+      <label class="ap-label" for="username">Tên đăng nhập</label>
+      <input class="ap-input" id="username" name="username" autocomplete="username" required autofocus>
+
+      <label class="ap-label" for="password">Mật khẩu</label>
+      <input class="ap-input" id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button class="ap-btn block" type="submit" id="btn-login">Đăng nhập</button>
+      <div class="ap-msg" id="msg" role="alert"></div>
+      <p class="ap-muted" style="margin: 16px 0 0;">Quên mật khẩu? Liên hệ quản trị viên để cấp lại.</p>
+    </form>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/login.js"></script>
+</body>
+</html>

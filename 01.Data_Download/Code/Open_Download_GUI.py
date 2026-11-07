@@ -24,6 +24,7 @@ from Common_Download_Utils import (
 )
 
 RUNNER = Path(__file__).resolve().parent / "Run_Download_Background.py"
+NX_PARTS = {"nx_nsx": "NSX", "nx_xch": "XCH", "nx_trakho": "TraKho"}  # giống Run_Download_Background.py
 FMT = "%d/%m/%Y"
 
 JOB_LABELS = {
@@ -33,6 +34,9 @@ JOB_LABELS = {
     "ban_hang": "Bán hàng - BC_CTBH_Size (Baocao_BanHang_...)",
     "ban_hd": "Bán hợp đồng - BC_NXK_CH_SL (Baocao_BanHD_...)",
     "nx_kho": "Nhập xuất kho - BC_NX_KHO (NSX_ / XCH_ / TraKho_<kho>_...)",
+    "nx_nsx": "Nhập từ sản xuất - BC_NX_KHO (NSX_<kho>_...)",
+    "nx_xch": "Xuất cửa hàng - BC_NX_KHO (XCH_<kho>_...)",
+    "nx_trakho": "Trả kho, nhập từ CH - BC_NX_KHO (TraKho_<kho>_...)",
     "ton_kho": "Tồn kho - TimKiemHH (TonKho_<kho>_<nhóm>)",
 }
 
@@ -112,11 +116,13 @@ class App(tk.Tk):
         box.pack(fill="x")
         self.job_vars, self.job_checks, self.date_inputs, self.notes = {}, {}, {}, {}
         sel = self.settings.get("selected", {})
-        for key in ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho"):
+        for key in ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_nsx", "nx_xch", "nx_trakho",
+                    "ton_kho"):
             row = ttk.Frame(box)
             row.pack(anchor="w", fill="x", pady=2)
-            # luan_chuyen trước đây đi kèm qlkd -> chưa lưu thì lấy theo ô qlkd
-            v = tk.BooleanVar(value=sel.get(key, sel.get("qlkd", True) if key == "luan_chuyen" else True))
+            # luan_chuyen trước đây đi kèm qlkd, nx_* trước đây chung 1 ô nx_kho -> chưa lưu thì lấy theo ô cũ
+            old_key = {"luan_chuyen": "qlkd", "nx_nsx": "nx_kho", "nx_xch": "nx_kho", "nx_trakho": "nx_kho"}.get(key)
+            v = tk.BooleanVar(value=sel.get(key, sel.get(old_key, True) if old_key else True))
             cb = ttk.Checkbutton(row, variable=v, command=self.refresh_job_labels)
             cb.pack(side="left")
             self.job_vars[key], self.job_checks[key] = v, cb
@@ -180,7 +186,7 @@ class App(tk.Tk):
             return months_back_range(self.settings["qlkd"]["months_back"])
         if key == "ton_kho":  # hôm qua
             return (yesterday(),)
-        if key in ("nx_kho", "qlkd_ntc"):  # trọn tháng trước
+        if key in ("nx_kho", "nx_nsx", "nx_xch", "nx_trakho", "qlkd_ntc"):  # trọn tháng trước
             return prev_month_range()
         return month_range()  # bán hàng, bán HĐ: 1/tháng -> hôm qua
 
@@ -199,17 +205,24 @@ class App(tk.Tk):
             "ban_hang": "",
             "ban_hd": "(Báo cáo xuất kho + Xuất bán hợp đồng)",
             "nx_kho": f"({sum(len(r['kho']) for r in self.settings['nx_kho']['reports'])} file)",
+            **{k: f"({len(self.nx_report(name)['kho'])} kho)" for k, name in NX_PARTS.items()},
             "ton_kho": f"({n_cells} ô đang tích trong ma trận)",
         }
         for key, cb in self.job_checks.items():
             cb.configure(text=JOB_LABELS[key])
             self.notes[key].configure(text=notes[key])
 
+    def nx_report(self, name):
+        """Cấu hình 1 báo cáo của BC_NX_KHO theo tên ("NSX" / "XCH" / "TraKho")."""
+        return next((r for r in self.settings["nx_kho"]["reports"] if r["name"] == name), {"kho": []})
+
     DATE_FLAGS = {"qlkd": "--range-qlkd", "luan_chuyen": "--range-luan-chuyen", "qlkd_ntc": "--range-qlkd-ntc",
                   "ban_hang": "--range-ban-hang", "ban_hd": "--range-ban-hd", "nx_kho": "--range-nx-kho",
-                  "ton_kho": "--date-ton-kho"}
+                  "ton_kho": "--date-ton-kho", "nx_nsx": "--range-nx-nsx", "nx_xch": "--range-nx-xch",
+                  "nx_trakho": "--range-nx-trakho"}
     JOB_NAMES = {"qlkd": "QLKD", "luan_chuyen": "Luân chuyển", "qlkd_ntc": "QLKD nhập trung chuyển",
-                 "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng", "nx_kho": "Nhập xuất kho", "ton_kho": "Tồn kho"}
+                 "ban_hang": "Bán hàng", "ban_hd": "Bán hợp đồng", "nx_kho": "Nhập xuất kho", "ton_kho": "Tồn kho",
+                 "nx_nsx": "Nhập từ sản xuất", "nx_xch": "Xuất cửa hàng", "nx_trakho": "Trả kho"}
 
     def date_range_args(self, jobs):
         """['--range-qlkd', 'tu', 'den', '--date-ton-kho', 'ngay', ...] theo ô ngày; báo lỗi nếu ngày sai."""

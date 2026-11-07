@@ -15,6 +15,7 @@ Mục:  qlkd     = QLKD hàng đi đường (QLKD_<kho>)      luan_chuyen = Luâ
       ban_hang = Baocao_BanHang      ban_hd = Baocao_BanHD      ton_kho = TonKho_<kho>_<nhóm>
       qlkd_ntc = QLKD nhập kho trung chuyển, chi tiết có mã hàng (NTC_<kho>_<tg>)
       nx_kho   = BC_NX_KHO: NSX_<kho>_<tg> (nhập SX) + XCH_<kho>_<tg> (xuất CH) + TraKho_<kho>_<tg> (nhập từ CH)
+      nx_nsx / nx_xch / nx_trakho = từng báo cáo trên, chạy riêng (vd --jobs nx_xch --range-nx-xch 01/10/2026 31/10/2026)
 """
 import argparse
 import datetime as dt
@@ -32,7 +33,10 @@ from Common_Download_Utils import (
 import Download_From_QLKD as site_qlkd
 import Download_From_Report as site_report
 
-ALL_JOBS = ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho")
+ALL_JOBS = ("qlkd", "luan_chuyen", "qlkd_ntc", "ban_hang", "ban_hd", "nx_kho", "ton_kho",
+            "nx_nsx", "nx_xch", "nx_trakho")
+# Từng báo cáo của BC_NX_KHO tích riêng (nx_kho = cả 3, giữ cho lệnh / lịch chạy cũ)
+NX_PARTS = {"nx_nsx": "NSX", "nx_xch": "XCH", "nx_trakho": "TraKho"}
 
 
 # ----------------------------------------------------------------------------- 1 lượt tải
@@ -159,6 +163,9 @@ def main():
                     help="Khoảng ngày Bán HĐ, dd/mm/yyyy (mặc định 1/tháng -> hôm qua)")
     ap.add_argument("--range-nx-kho", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày NSX/XCH/TraKho, dd/mm/yyyy (mặc định trọn tháng trước)")
+    for key, name in NX_PARTS.items():
+        ap.add_argument(f"--range-{key.replace('_', '-')}", nargs=2, metavar=("TU", "DEN"), type=parse_date,
+                        help=f"Khoảng ngày {name}, dd/mm/yyyy (mặc định trọn tháng trước)")
     ap.add_argument("--range-qlkd-ntc", nargs=2, metavar=("TU", "DEN"), type=parse_date,
                     help="Khoảng ngày QLKD nhập trung chuyển, dd/mm/yyyy (mặc định trọn tháng trước)")
     args = ap.parse_args()
@@ -167,6 +174,9 @@ def main():
 
     sel_cfg = dict(SETTINGS.get("selected", {}))
     sel_cfg.setdefault("luan_chuyen", sel_cfg.get("qlkd", False))  # Settings cũ: RP đi kèm qlkd
+    if "nx_kho" in sel_cfg and not any(k in sel_cfg for k in NX_PARTS):
+        old = sel_cfg.pop("nx_kho")  # Settings cũ: 1 ô cho cả 3
+        sel_cfg.update({k: old for k in NX_PARTS})
     selected = args.jobs or [k for k in ALL_JOBS if sel_cfg.get(k)]
     reload_empty = args.reload_empty or SETTINGS.get("reload_empty", False)
     if not selected:
@@ -180,6 +190,11 @@ def main():
         report_jobs += site_report.jobs_ban_hd(args.range_ban_hd)
     if "nx_kho" in selected:
         report_jobs += site_report.jobs_nx_kho(args.range_nx_kho)
+    for key, name in NX_PARTS.items():
+        if key in selected:
+            stems = {j.stem for j in report_jobs}
+            report_jobs += [j for j in site_report.jobs_nx_kho_one(name, getattr(args, f"range_{key}"))
+                            if j.stem not in stems]
     if "luan_chuyen" in selected:
         report_jobs += site_report.jobs_luan_chuyen(args.range_luan_chuyen)
     skipped = []

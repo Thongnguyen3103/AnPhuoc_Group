@@ -23,7 +23,7 @@ import Get_Paths  # noqa: E402
 
 
 class AppConfig:
-    """Cau hinh tong hop cho Build_Data_LCHH.py / Build_Data_Performance.py."""
+    """Cau hinh tong hop cho Build_Master_LC.py."""
 
     def __init__(self, project_yaml: str = DEFAULT_PROJECT_YAML):
         with open(project_yaml, "r", encoding="utf-8") as f:
@@ -41,8 +41,6 @@ class AppConfig:
         }
 
         self.periods_default = [str(p) for p in (raw.get("periods") or [])]
-        self.sales_months_ahead = int(raw.get("sales_months_ahead", 3))
-        self.sales_noi_dung = set(raw.get("sales_noi_dung") or ["Bán"])
         self.han_thuc_hien_ngay = int(raw.get("han_thuc_hien_ngay", 15))
         self.store_alias = raw.get("store_alias") or {}
 
@@ -53,7 +51,7 @@ class AppConfig:
 
     def resolve_periods(self, argv: list[str] | None = None) -> list[tuple[int, int]]:
         """Chon ky bao cao theo thu tu uu tien:
-           1) tham so dong lenh:  python Build_Data_LCHH.py 2026-09
+           1) tham so dong lenh:  python Build_Master_LC.py 2026-10
            2) tu nhap khi chay (Enter de dung config)
            3) danh sach 'periods' trong Config_LCHH.yaml
         Chap nhan 'YYYY-MM' hoac chi so thang (nam lay tu config / nam hien tai).

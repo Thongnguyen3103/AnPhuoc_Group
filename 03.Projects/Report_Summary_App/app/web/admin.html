@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản trị — Báo cáo Tổng hợp</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="ap-page">
+  <header class="ap-topbar">
+    <span class="ap-brand">AN PHUOC GROUP <small>Quản trị</small></span>
+    <nav>
+      <a href="/">📊 Báo cáo</a>
+      <a href="/account">Đổi mật khẩu</a>
+      <button class="ap-link" type="button" id="nav-logout">Đăng xuất</button>
+    </nav>
+  </header>
+
+  <main class="ap-main">
+    <div class="ap-tabs" role="tablist">
+      <button class="ap-tab active" data-tab="users" role="tab">👥 Người dùng</button>
+      <button class="ap-tab" data-tab="data" role="tab">🗂️ Dữ liệu báo cáo</button>
+      <button class="ap-tab" data-tab="audit" role="tab">📜 Nhật ký</button>
+    </div>
+
+    <!-- NGƯỜI DÙNG -->
+    <section class="ap-panel active" id="panel-users">
+      <div class="ap-box">
+        <h2>Thêm người dùng</h2>
+        <form id="user-form" class="ap-row" novalidate>
+          <div>
+            <label class="ap-label" for="nu-username">Tên đăng nhập</label>
+            <input class="ap-input" id="nu-username" placeholder="vd: lan.nguyen" required>
+          </div>
+          <div>
+            <label class="ap-label" for="nu-fullname">Họ tên</label>
+            <input class="ap-input" id="nu-fullname" placeholder="Nguyễn Thị Lan">
+          </div>
+          <div style="flex: 0 1 140px;">
+            <label class="ap-label" for="nu-role">Vai trò</label>
+            <select class="ap-select" id="nu-role">
+              <option value="viewer">Người xem</option>
+              <option value="admin">Quản trị</option>
+            </select>
+          </div>
+          <div style="flex: 0 0 auto;">
+            <button class="ap-btn" type="submit">+ Tạo</button>
+          </div>
+        </form>
+        <div class="ap-muted" style="margin-top: 8px;">Hệ thống sinh mật khẩu tạm, chỉ hiện 1 lần. Người dùng phải đổi mật khẩu ở lần đăng nhập đầu.</div>
+        <div class="ap-msg" id="user-msg" role="alert"></div>
+      </div>
+      <div class="ap-box">
+        <h2>Danh sách người dùng <span class="ap-muted" id="user-count"></span></h2>
+        <div class="ap-table-wrap">
+          <table class="ap-table">
+            <thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th><th>Thao tác</th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DỮ LIỆU -->
+    <section class="ap-panel" id="panel-data">
+      <div class="ap-box">
+        <h2>Bản build mới nhất từ pipeline</h2>
+        <div id="source-info" class="ap-muted">Đang tải...</div>
+        <div style="margin-top: 12px;"><button class="ap-btn" id="btn-import">⟳ Nạp bản build mới nhất</button></div>
+        <div class="ap-muted" style="margin-top: 8px;">Máy chủ cũng tự kiểm tra và nạp bản build mới định kỳ.</div>
+        <div class="ap-msg" id="data-msg" role="alert"></div>
+      </div>
+      <div class="ap-box">
+        <h2>Lịch sử dữ liệu</h2>
+        <div class="ap-table-wrap">
+          <table class="ap-table">
+            <thead><tr><th>#</th><th>Kỳ</th><th>Thời điểm build</th><th>Nạp lúc</th><th>Dung lượng</th><th>Số SKU</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody id="snap-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- NHẬT KÝ -->
+    <section class="ap-panel" id="panel-audit">
+      <div class="ap-box">
+        <h2>Nhật ký hoạt động (200 dòng gần nhất)</h2>
+        <div class="ap-table-wrap">
+          <table class="ap-table">
+            <thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th><th>IP</th></tr></thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/admin.js"></script>
+</body>
+</html>
